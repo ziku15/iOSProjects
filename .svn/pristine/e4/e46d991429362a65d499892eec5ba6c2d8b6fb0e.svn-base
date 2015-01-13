@@ -1,0 +1,26 @@
+//
+//  FullScreenPhotoViewer.h
+//  Pulse
+//
+//  Created by xibic on 6/27/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+
+@protocol FullScreenPhotoViewerDelegate <NSObject>
+
+@optional
+- (void)closePhotoViewer;
+
+@end
+
+
+@interface FullScreenPhotoViewer : UIView
+
+@property(nonatomic, retain) id<FullScreenPhotoViewerDelegate>delegate;
+
+- (id)initWithFrame:(CGRect)frame photosArray:(NSArray*)array withSelectedIndex:(int)sindex;
+
+@end

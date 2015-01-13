@@ -1,0 +1,1008 @@
+//
+//  ForumsViewController.m
+//  Pulse
+//
+//  Created by xibic on 6/11/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "ForumsViewController.h"
+#import "FUploadImageView.h"
+#import "ForumNewPostViewController.h"
+#import "ForumPostDetailsViewController.h"
+#import "XIBSegmentControl.h"
+#import "ForumPostCell.h"
+#import "HashTagCell.h"
+#import "HashTagItem.h"
+#import "EventsTabbarView.h"
+#import <objc/runtime.h> //Used for delete Post
+#import "ForumPostView.h"
+
+typedef enum {
+    kAllPosts = 0,
+    kTopics,
+    kMyPosts
+}TabBarButtonIndex;
+
+const char MyConstantKey;  //Used for delete Post
+
+#define kConversationOptionViewDefaultFrame CGRectMake(0.0f, 50.0f, 320.0f, 30.0f)
+#define kConversationOptionViewSecondFrame CGRectMake(0.0f, 0.0f, 320.0f, 30.0f)
+
+#define kTableViewPostWithOptionFrame CGRectMake(0.0f, 80.0f, 320.0f, SCREEN_SIZE.height-178.0f-24.0f)
+#define kTableViewPostNoOptionFrame CGRectMake(0.0f, 50.0f, 320.0f, SCREEN_SIZE.height-148.0f-24.0f)
+#define kTableViewHashtagFrame CGRectMake(0.0f, 30.0f, 320.0f, SCREEN_SIZE.height-128.0f-24.0f)
+
+@interface ForumsViewController ()<FUploadImageViewDelegate,UITableViewDataSource,UITableViewDelegate, UIAlertViewDelegate,ForumPostViewDelegate>{
+
+    EventsTabbarView *tabView;
+    NSString *selectedHashTag;
+    NSString *selectedType;
+    int selectedTab;
+    BOOL shouldGoBack;
+    XIBUnderLinedButton *latestPostButton, *topConvButton;
+    ForumPostView *forumPostView;
+    
+    UIView *conversationAboutView;
+    UIView *conversationOptionView;
+    
+    UIButton *postButton;
+    UILabel* noDataLabel;
+    
+    BOOL isSelfPosted;
+    
+}
+
+@property (strong, nonatomic) NSMutableArray *dataSource;
+
+@property (strong, nonatomic) UITableView *tableView;
+
+
+@end
+
+@implementation ForumsViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        self.title = @"Forums";
+    }
+    return self;
+}
+
+- (void)viewDidDisappear:(BOOL)animated{
+    [super viewDidDisappear:animated];
+    self.tableView = nil;
+}
+
+- (void)viewDidLoad{
+    [super viewDidLoad];
+    
+    SCROLL_CONSIDER_HEIGHT = 300;
+    menuSignature = forums_index;
+    
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults setObject:[NSNumber numberWithBool:NO] forKey:@"IsDetailsPage"];
+    [defaults setObject:@"" forKey:@"Hashtag"];
+    [defaults synchronize];
+    
+    isSelfPosted = NO;
+    
+    [self.tableView registerClass:[ForumPostCell class] forCellReuseIdentifier:@"ForumPostCell"];
+    [self.tableView registerClass:[HashTagCell class] forCellReuseIdentifier:@"HashTagCell"];
+    noDataLabel = (UILabel*) [self.view viewWithTag: 199];
+    shouldGoBack = YES;
+    selectedHashTag = @"";
+    
+    [self addTopSegmentControl];
+
+    [self createConversationOptionView];
+   
+    [self addPostForumButtonView];
+
+    //[self CommentViewBottom];
+    
+    /*dispatch_queue_t backgroundQueue = dispatch_queue_create("Background Queue", NULL);
+    dispatch_async(backgroundQueue, ^{
+        //Clear bubble notification = 6 == Forums type
+        [[ServerManager sharedManager] updateBubbleNotificationStatus:@"6" completion:^(BOOL success) {
+            if (success) {
+            }
+        }];
+    });*/
+    
+    
+    
+    
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    [tabView resetButtonCondition:0];
+    
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *hashString =[defaults objectForKey:@"Hashtag"];
+    BOOL isHashTagPressed =[[defaults objectForKey:@"IsDetailsPage"] boolValue];
+    
+    [latestPostButton setSelectedButtonTitleColorChange];
+    [topConvButton setDeSelectedButtonTitleColorChange];
+    
+    if (isHashTagPressed) {
+        shouldGoBack = NO;
+        selectedHashTag = hashString;
+        [self makeServerRequestFor_HashTag_LatestPost];
+        
+    }
+    else {
+        if([selectedHashTag isEqualToString:@""])[self makeServerRequestFor_AllPost_LatestPost];
+        else [self makeServerRequestFor_HashTag_LatestPost];
+    }
+    
+}
+- (void)goBack{
+    if(shouldGoBack)[self.navigationController popViewControllerAnimated:YES];
+    else{
+        [latestPostButton setSelectedButtonTitleColorChange];
+        [topConvButton setDeSelectedButtonTitleColorChange];
+        
+        shouldGoBack = YES;
+        [tabView resetButtonCondition:kAllPosts];
+        tabView.alpha = 1.0f;
+        //[postButton setTitle:@"Create your own post" forState:UIControlStateNormal];
+        [postButton setBackgroundImage:[UIImage imageNamed:@"create_post_btn.png"] forState:UIControlStateNormal];
+        [self makeServerRequestFor_AllPost_LatestPost];
+        
+    }
+    [loadingView dismisssView];
+}
+
+
+#pragma mark -
+#pragma mark - LatestPost/Conversation
+- (void)createConversationOptionView{
+    
+    conversationOptionView = [[UIView alloc] initWithFrame:kConversationOptionViewDefaultFrame];
+    [self.view addSubview:conversationOptionView];
+    
+    conversationOptionView.backgroundColor = [UIColor whiteColor];
+    
+    latestPostButton = [XIBUnderLinedButton buttonWithType:UIButtonTypeCustom];
+    latestPostButton.userInteractionEnabled = YES;
+    //[latestPostButton setTitleColor:[UIColor sidraFlatBlueColor] forState:UIControlStateNormal];
+    
+    [latestPostButton setSelectedButtonTitleColorChange];
+    
+    latestPostButton.titleLabel.font = [UIFont systemFontOfSize:13.0f];
+    [latestPostButton setTitle:@"Latest Posts" forState:UIControlStateNormal];
+    [latestPostButton setFrame:CGRectMake(50.0f, 2.0f, 88.0f,24.0f)];
+    [latestPostButton setBackgroundColor:[UIColor clearColor]];
+    [latestPostButton addTarget:self
+                     action:@selector(latestPostsButtonAction:)
+           forControlEvents:UIControlEventTouchUpInside];
+    
+    
+    UIBezierPath *path = [UIBezierPath bezierPath];
+    [path moveToPoint:CGPointMake(latestPostButton.frame.origin.x+latestPostButton.frame.size.width+5.0f, 5.0f)];
+    [path addLineToPoint:CGPointMake(latestPostButton.frame.origin.x+latestPostButton.frame.size.width+5.0f, 22.0f)];
+    
+    CAShapeLayer *shapeLayer = [CAShapeLayer layer];
+    shapeLayer.path = [path CGPath];
+    shapeLayer.strokeColor = [[UIColor blackColor] CGColor];
+    shapeLayer.lineWidth = 1.0;
+    shapeLayer.fillColor = [[UIColor clearColor] CGColor];
+    
+    [conversationOptionView.layer addSublayer:shapeLayer];
+    
+    topConvButton = [XIBUnderLinedButton buttonWithType:UIButtonTypeCustom];
+    topConvButton.userInteractionEnabled = YES;
+    //[topConvButton setTitleColor:[UIColor sidraFlatBlueColor] forState:UIControlStateNormal];
+
+    [topConvButton setDeSelectedButtonTitleColorChange];
+    
+    topConvButton.titleLabel.font = [UIFont systemFontOfSize:13.0f];
+    [topConvButton setTitle:@"Top Conversations" forState:UIControlStateNormal];
+    [topConvButton setFrame:CGRectMake(latestPostButton.frame.origin.x+latestPostButton.frame.size.width+10.0f, 2.0f,
+                                       128.0f,24.0f)];
+    [topConvButton setBackgroundColor:[UIColor clearColor]];
+    [topConvButton addTarget:self
+                   action:@selector(topConversationButtonAction:)
+         forControlEvents:UIControlEventTouchUpInside];
+    
+    [conversationOptionView addSubview:latestPostButton];
+    [conversationOptionView addSubview:topConvButton];
+    
+    conversationOptionView.alpha = 1.0f;
+    
+    
+    
+    
+    [conversationOptionView.layer addSublayer:shapeLayer];
+    
+//    CGRect tableFrame = self.tableView.frame;
+//    tableFrame.origin.y = 80.0f;
+//    self.tableView.frame = tableFrame;
+    
+}
+
+
+#pragma mark -
+#pragma mark - SegmentControl
+- (void)addTopSegmentControl{
+    //Create tab panel
+    [tabView removeFromSuperview];
+    tabView = nil;
+    tabView = [[EventsTabbarView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 320.0f, 50.0f) with:self
+                                      withButtonTitle:@[@"All Posts",@"Topics",@"My Posts"] withLastIndex:kMyPosts];
+    [tabView setBackgroundColor:[UIColor whiteColor]];
+    //-----------------
+    dispatch_queue_t backgroundQueue = dispatch_queue_create("Background Notifications Queue", NULL);
+    dispatch_async(backgroundQueue, ^{
+        if (![[UserManager sharedManager].userID isEqualToString:@"0"]) {
+            ///*
+            [[ServerManager sharedManager] fetchAllNotifications:^(BOOL success, NSMutableArray *resultDataArray) {
+                if (success) {
+                    
+                    //call this methode after server finish call
+                    
+                    MenuItem *item = (MenuItem *)[resultDataArray objectAtIndex:0];
+                    if(item.forums!=0)
+                    [tabView showBubbleNumber:item.forums atButtonIndex:kMyPosts];
+                    else
+                        [tabView hideBubbleAtButtonIndex:kMyPosts];
+                    
+                }else{
+                    [tabView hideBubbleAtButtonIndex:kMyPosts];
+                    
+                }
+            }];
+            // */
+        }
+    });
+
+    //----------------
+    
+    
+    [self.view addSubview:tabView];
+
+    tabView.alpha = 1.0f;
+    
+}
+#pragma mark - tabbar delegate
+
+-(void)tabButtonAction:(int)button_tag{
+    [loadingView dismisssView];
+    shouldGoBack = YES;
+    if (button_tag == kAllPosts) {
+        selectedTab = kAllPosts;
+        self.dataSource = nil;
+        [self makeServerRequestFor_AllPost_LatestPost];
+        [latestPostButton setSelectedButtonTitleColorChange];
+        [topConvButton setDeSelectedButtonTitleColorChange];
+    }
+    else if(button_tag == kTopics){
+        self.dataSource = nil;
+        selectedTab = kTopics;
+        [self makeServerRequestFor_Topics];
+        
+    }
+    else if (button_tag == kMyPosts) {
+        self.dataSource = nil;
+        selectedTab = kMyPosts;
+        [self makeServerRequestFor_MyPosts];
+        
+        dispatch_queue_t backgroundQueue = dispatch_queue_create("Background Queue", NULL);
+        dispatch_async(backgroundQueue, ^{
+            //Clear bubble notification = 6 == Forums type
+            [[ServerManager sharedManager] updateBubbleNotificationStatus:@"6" completion:^(BOOL success) {
+                if (success) {
+                    [tabView hideBubbleAtButtonIndex:kMyPosts];
+                }
+            }];
+        });
+        
+    }
+}
+
+#pragma mark - latest Post Action
+- (void)latestPostsButtonAction:(id)sender{
+    [latestPostButton setSelectedButtonTitleColorChange];
+    [topConvButton setDeSelectedButtonTitleColorChange];
+    
+    if([selectedHashTag isEqualToString:@""]){
+        [self makeServerRequestFor_AllPost_LatestPost];
+        
+    }
+    else [self makeServerRequestFor_HashTag_LatestPost];
+}
+
+#pragma mark - conversation Action
+- (void)topConversationButtonAction:(id)sender{
+    [latestPostButton setDeSelectedButtonTitleColorChange];
+    [topConvButton setSelectedButtonTitleColorChange];
+    if([selectedHashTag isEqualToString:@""]){
+        [self makeServerRequestFor_AllPost_TopConversation];
+
+    }
+    else [self makeServerRequestFor_HashTag_TopConversation];
+}
+
+
+#pragma mark -
+#pragma mark - Share on Forum
+
+
+
+- (void)addPostForumButtonView{
+    
+    
+    
+    UIView *bottomCommentView = [[UIView alloc] initWithFrame:CGRectMake( -1, [[UIScreen mainScreen] bounds].size.height - 60 - 60, 320, 60)];
+    bottomCommentView.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:bottomCommentView];
+    
+    bottomCommentView.backgroundColor = [UIColor sidraFlatLightGrayColor];
+    //[bottomCommentView.layer setBorderColor:[[[UIColor grayColor] colorWithAlphaComponent:1.0] CGColor]];
+    
+//    CALayer *upperBorder = [CALayer layer];
+//    upperBorder.borderColor = [UIColor lightGrayColor].CGColor;
+//    upperBorder.borderWidth = kViewBorderWidth;
+//    upperBorder.frame = CGRectMake(0, 0, CGRectGetWidth(bottomCommentView.frame), 1.0f);
+//    [bottomCommentView.layer addSublayer:upperBorder];
+    
+    UIView *singleLineView = [[UIView alloc] init];
+    [singleLineView setFrame:CGRectMake(0, 0, 320, 1)];
+    singleLineView.backgroundColor = [UIColor lightGrayColor];
+    [bottomCommentView addSubview:singleLineView];
+    
+    
+    //[bottomCommentView.layer setBorderWidth:kViewBorderWidth+1.0];
+    bottomCommentView.clipsToBounds = YES;
+    
+    
+    [postButton removeFromSuperview];
+    postButton = nil;
+    
+    
+    postButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    [postButton setFrame:CGRectMake(10.0f,8.0f, 300, 40.0f)];
+    [postButton setBackgroundImage:[UIImage imageNamed:@"create_post_btn.png"] forState:UIControlStateNormal];
+    
+    //postButton.layer.cornerRadius = kViewCornerRadius;
+    
+//    [postButton setTitle:@"Create your own post" forState:UIControlStateNormal];
+//    [postButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+//    [postButton.titleLabel setFont:[UIFont systemFontOfSize:14.0f]];
+//    [postButton.layer setCornerRadius:kViewCornerRadius];
+    
+    
+    [postButton addTarget:self action:@selector(forumPostButtonAction:) forControlEvents:UIControlEventTouchUpInside];
+    [bottomCommentView addSubview:postButton];
+    //[bottomCommentView bringSubviewToFront:postButton];
+    
+
+ 
+    /************************************************Trash Segment****************************
+    [postButton removeFromSuperview];
+    postButton = nil;
+    
+    postButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    [postButton setFrame:CGRectMake(1.0f, SCREEN_SIZE.height-98.0f, 318.0f, 34.0f)];
+    [postButton setBackgroundImage:[UIImage imageNamed:@"create_post_btn.png"] forState:UIControlStateNormal];
+    postButton.layer.cornerRadius = kSubViewCornerRadius;
+    
+    [postButton setTitle:@"Create your own post" forState:UIControlStateNormal];
+    [postButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [postButton.titleLabel setFont:[UIFont systemFontOfSize:14.0f]];
+    
+    
+    [postButton addTarget:self action:@selector(forumPostButtonAction:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:postButton];
+    [self.view bringSubviewToFront:postButton];
+ 
+    *******************************************************************************************/
+}
+
+
+
+- (void)forumPostButtonAction:(id)sender{
+    [forumPostView removeFromSuperview];
+    forumPostView = Nil;
+    forumPostView = [[ForumPostView alloc] initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height) forPostView:NO withHashTag:selectedHashTag];
+    forumPostView.backgroundColor  = [UIColor clearColor];
+    forumPostView.delegate = self;
+    forumPostView.postID = @"";
+    //[self.view addSubview:forumPostView];
+    [[UIApplication sharedApplication].keyWindow addSubview:forumPostView];
+    
+}
+
+/************************************** Trash Segment ***********************************************
+
+-(void) CommentViewBottom{
+    
+    UIView *bottomCommentView = [[UIView alloc] initWithFrame:CGRectMake( -1, [[UIScreen mainScreen] bounds].size.height - 60 - 50, 322, 50)];
+    bottomCommentView.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:bottomCommentView];
+    
+    bottomCommentView.backgroundColor = [UIColor sidraFlatLightGrayColor];
+    [bottomCommentView.layer setBorderColor:[[[UIColor sidraFlatLightGrayColor] colorWithAlphaComponent:1.0] CGColor]];
+    [bottomCommentView.layer setBorderWidth:kViewBorderWidth+1.0];
+    bottomCommentView.clipsToBounds = YES;
+    
+
+    [postButton removeFromSuperview];
+    postButton = nil;
+    
+    
+    postButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    [postButton setFrame:CGRectMake(6.0f,5.0f, bottomCommentView.frame.size.width-12, 34.0f)];
+    [postButton setBackgroundImage:[UIImage imageNamed:@"create_post_btn.png"] forState:UIControlStateNormal];
+    postButton.layer.cornerRadius = kSubViewCornerRadius;
+    
+    [postButton setTitle:@"Create your own post" forState:UIControlStateNormal];
+    [postButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [postButton.titleLabel setFont:[UIFont systemFontOfSize:14.0f]];
+    [postButton.layer setCornerRadius:kViewCornerRadius];
+    
+    
+    [postButton addTarget:self action:@selector(forumPostButtonAction:) forControlEvents:UIControlEventTouchUpInside];
+    [bottomCommentView addSubview:postButton];
+    //[bottomCommentView bringSubviewToFront:postButton];
+
+    
+}
+
+
+
+****************************************************************************************************************/
+
+
+
+
+
+#pragma mark - ForumPostView Delegate
+-(void)sendBtnValue:(NSString *)text commentItem:(CommentItem *)item{
+    XLog(@"post : %@", text);
+    XLog(@"item : %@", item);
+    [forumPostView removeFromSuperview];
+    forumPostView = nil;
+    
+    if([selectedHashTag isEqualToString:@""]){
+        [forumPostView removeFromSuperview];
+        forumPostView = nil;
+    }
+    else [self makeServerRequestFor_HashTag_LatestPost];
+    
+    //post notification
+    CGRect frame = CGRectMake([UIScreen mainScreen].bounds.size.width/8.0, [UIScreen mainScreen].bounds.size.height/5.0 , 160, 50);
+    NSString *msg = @"Posted Successfully to the Sidra Forum";
+    AlertPopView *alertMsg = [[AlertPopView alloc] initWithFrame:frame alertMsg:msg];
+    [[UIApplication sharedApplication].keyWindow addSubview:alertMsg];
+    alertMsg = nil;
+}
+
+-(void) cancelComment {
+    [forumPostView removeFromSuperview];
+    forumPostView = nil;
+}
+
+-(void)isPostingContinue:(BOOL)isPost{
+    
+}
+
+#pragma mark -
+#pragma mark - UITableView
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return [self.dataSource count]>0?[self.dataSource count]:0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return [selectedType isEqualToString:@"2"]?80.0f:100.0f;
+}
+
+#pragma mark - TableView CellForRowAtIndexPath
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+   // static NSString *cellIdentifierForumPost = @"ForumPostCell";
+  //  static NSString *cellIdentifierHashTag = @"HashTagCell";
+    static NSString *cellIdentifierHashTag;
+    cellIdentifierHashTag= [NSString stringWithFormat:@"HashTagCell%ld",(long)indexPath.row];
+    
+    if ([selectedType isEqualToString:@"2"]) {
+        HashTagCell *cell = (HashTagCell *)[self.tableView dequeueReusableCellWithIdentifier:cellIdentifierHashTag];
+        HashTagItem *item = (HashTagItem *)[self.dataSource objectAtIndex:indexPath.row];
+       // cell = nil;
+        if (cell == nil) {
+            cell = [[HashTagCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifierHashTag];
+            [cell customizeWithHashTag:[NSString stringWithFormat:@"%d. #%@",indexPath.row+1,item.tagName] andConversationCount:(int)[item.postCount integerValue]];
+        }
+        
+        //Delete - Tap Action
+        [cell setDidTapDeleteButtonBlock:^(id sender) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                //[self.dataSource removeObjectAtIndex:indexPath.row];
+                //[self.tableView reloadData];
+            });
+        }];
+        // Hashtag - Tap Action
+        [cell setDidTapHashTagBlock:^(id sender) {
+            NSString *newSelectedHashTag = [(NSString *)sender stringByReplacingOccurrencesOfString:@"#" withString:@""];
+            
+            if (([newSelectedHashTag rangeOfString:@"https://"].location != NSNotFound)||([newSelectedHashTag rangeOfString:@"http://"].location != NSNotFound)) {
+                
+                if (![selectedType isEqualToString:@"2"]) {
+                    ForumItem *item = (ForumItem *)[self.dataSource objectAtIndex:indexPath.row];
+                    ForumPostDetailsViewController *detailsViewController = [[ForumPostDetailsViewController alloc]
+                                                                             initWithNibName:@"ForumPostDetailsViewController" bundle:nil];
+                    detailsViewController.shouldShowRightMenuButton = YES;
+                    detailsViewController.forumItemArray = item;
+                    [self.navigationController pushViewController:detailsViewController animated:YES];
+                    detailsViewController = nil;
+                }
+                
+            }
+            else {
+                if (![newSelectedHashTag isEqualToString:selectedHashTag]) {
+                    shouldGoBack = NO;
+                    selectedHashTag = newSelectedHashTag;
+                    [self makeServerRequestFor_HashTag_LatestPost];
+                }
+            }
+        }];
+        
+        return cell;
+    }
+    else{
+        
+        //ForumPostCell *cell = (ForumPostCell *)[self.tableView dequeueReusableCellWithIdentifier:cellIdentifierForumPost];
+        //cell = nil;
+        
+        static NSString *cellIdentifier;
+        cellIdentifier= [NSString stringWithFormat:@"ForumPostCell%ld",(long)indexPath.row];
+        ForumPostCell *cell = (ForumPostCell *)[tableView dequeueReusableCellWithIdentifier:cellIdentifier];
+        
+        ForumItem *item = (ForumItem *)[self.dataSource objectAtIndex:indexPath.row];
+        if (cell == nil) {
+            cell = [[ForumPostCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
+            // ASSIGN TAG
+            cell.postedByAuthorLabel.tag = indexPath.row + 100;
+            cell.timeLabel.tag = indexPath.row + 1100;
+            cell.deleteButton.tag = indexPath.row + 2100;
+            cell.descriptionTextLabel.tag = indexPath.row + 3100;
+            cell.numberOfRepliesLabel.tag = indexPath.row + 4100;
+            
+        }
+       // [cell customizeWithItem:item]; // off by Mehedi
+        
+        // GET CELL VIEW BY TAG
+        UILabel* _postedByAutorName = (UILabel*) [cell viewWithTag:indexPath.row + 100];
+        UILabel* _timeLabelShow = (UILabel*) [cell viewWithTag:indexPath.row + 1100];
+        UIButton* _deleteBtnShow = (UIButton*) [cell viewWithTag:indexPath.row + 2100];
+        STTweetLabel* _descriptionText = (STTweetLabel*) [cell viewWithTag:indexPath.row + 3100];
+        UILabel* _numberOfReples = (UILabel*) [cell viewWithTag:indexPath.row + 4100];
+        
+        int postCreatedBy = (int)[item.createdBy integerValue];
+        int myID = (int)[[UserManager sharedManager].userID  integerValue];
+        isSelfPosted = (postCreatedBy == myID);
+        if (isSelfPosted) {
+            
+            _postedByAutorName.textColor = [UIColor sidraFlatGreenColor];
+            _postedByAutorName.text = @"You";
+            _deleteBtnShow.alpha = 1.0f;
+            
+        }else{
+            _postedByAutorName.text = item.authorName;
+        }
+        
+        _timeLabelShow.text = [[SettingsManager sharedManager] showPostedByFromDate:item.createdDate];
+        _descriptionText.text = item.text;
+        (item.totalComments>1)?(_numberOfReples.text = [NSString stringWithFormat:@"%d replies",item.totalComments]):(_numberOfReples.text = [NSString stringWithFormat:@"%d reply",item.totalComments]);
+        //_numberOfReples.text = [NSString stringWithFormat:@"%d reply",item.totalComments];
+        
+        //Delete - Tap Action
+        [cell setDidTapDeleteButtonBlock:^(id sender) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+                NSString *_msg = @"Are you sure you want to delete your forum post?";
+                
+                UIAlertView *_alertMsg = [[UIAlertView alloc] initWithTitle:_msg message:nil delegate:self cancelButtonTitle:@"No" otherButtonTitles:@"Yes", nil];
+                _alertMsg.tag = 1;
+                NSNumber *indexNumber = [NSNumber numberWithInt:(int)indexPath.row];
+                objc_setAssociatedObject(_alertMsg, &MyConstantKey,indexNumber, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                [_alertMsg show];
+                
+//                            [[ServerManager sharedManager] deleteItem:item.itemID type:@"7" completion:^(BOOL success) {
+//                                if (success) {
+//                                    [self.dataSource removeObjectAtIndex:indexPath.row];
+//                                    [self.tableView reloadData];
+//                                }
+//                            }];
+            });
+        }];
+        // Hashtag - Tap Action
+        [cell setDidTapHashTagBlock:^(id sender) {
+            NSString *newSelectedHashTag = [(NSString *)sender stringByReplacingOccurrencesOfString:@"#" withString:@""];
+            
+            if (([newSelectedHashTag rangeOfString:@"https://"].location != NSNotFound)||([newSelectedHashTag rangeOfString:@"http://"].location != NSNotFound)||([newSelectedHashTag rangeOfString:@"www."].location != NSNotFound)) {
+                
+                if (![selectedType isEqualToString:@"2"]) {
+                    ForumItem *item = (ForumItem *)[self.dataSource objectAtIndex:indexPath.row];
+                    ForumPostDetailsViewController *detailsViewController = [[ForumPostDetailsViewController alloc]
+                                                                             initWithNibName:@"ForumPostDetailsViewController" bundle:nil];
+                    detailsViewController.shouldShowRightMenuButton = YES;
+                    detailsViewController.forumItemArray = item;
+                    [self.navigationController pushViewController:detailsViewController animated:YES];
+                    detailsViewController = nil;
+                }
+                
+            }
+            else {
+                 if (![newSelectedHashTag isEqualToString:selectedHashTag]) {
+                     shouldGoBack = NO;
+                     selectedHashTag = newSelectedHashTag;
+                     [self makeServerRequestFor_HashTag_LatestPost];
+                 }
+            }
+            
+        }];
+        return cell;
+    }
+    
+}
+
+- (void)customizeCellWithItem:(ForumItem *)item{
+}
+
+//row Select
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (![selectedType isEqualToString:@"2"]) {
+        ForumItem *item = (ForumItem *)[self.dataSource objectAtIndex:indexPath.row];
+        ForumPostDetailsViewController *detailsViewController = [[ForumPostDetailsViewController alloc]
+                                                                 initWithNibName:@"ForumPostDetailsViewController" bundle:nil];
+        detailsViewController.shouldShowRightMenuButton = YES;
+        detailsViewController.forumItemArray = item;
+        [self.navigationController pushViewController:detailsViewController animated:YES];
+        detailsViewController = nil;
+    }
+}
+
+
+
+#pragma mark - ALERT Delegate Method
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    
+    // POST Delete
+    
+    if (alertView.tag == 1) {
+        
+        if (buttonIndex == 1) {
+            
+            NSNumber  *getIndexNumber = objc_getAssociatedObject(alertView, &MyConstantKey);
+            ForumItem *item = (ForumItem *)[self.dataSource objectAtIndex:[getIndexNumber integerValue]];
+            
+            [[ServerManager sharedManager] deleteItem:item.itemID type:@"7" completion:^(BOOL success) {
+                if (success) {
+                        [self.dataSource removeObjectAtIndex:[getIndexNumber integerValue]];
+                    
+                        [self.tableView beginUpdates];
+                        NSMutableIndexSet* index = [[NSMutableIndexSet alloc]init];
+                        [index addIndex:0];
+                        [self.tableView reloadSections:index withRowAnimation:UITableViewRowAnimationAutomatic];
+                        [self.tableView endUpdates];
+                }
+            }];
+            
+        }
+    }
+    
+    
+    
+}
+
+
+#pragma mark - Refreshview
+- (void)updateNavigationBarTitle:(NSString*)titleString{
+    
+    UILabel *label = [[UILabel alloc]initWithFrame:CGRectMake(0.0f, 0.0f, 100.0f, 44.0f)];
+    [label setBackgroundColor:[UIColor clearColor]];
+    [label setNumberOfLines:0];
+    [label setFont:[UIFont boldSystemFontOfSize:15.0f]];
+    [label setTextColor:[UIColor whiteColor]];
+    [label setTextAlignment:NSTextAlignmentCenter];
+
+    [label setText:titleString];
+    
+    self.navigationItem.titleView = label;
+}
+
+
+
+//default and --
+- (void)makeServerRequestFor_AllPost_LatestPost{
+    XLog(@"_AllPost_LatestPost-4");
+    //type = 4
+    
+    
+    selectedType = @"4";
+    selectedHashTag = @"";
+    
+    self.tableView.alpha = 0.0f;
+    self.dataSource = nil;
+    conversationOptionView.alpha = 1.0f;
+    conversationOptionView.frame = kConversationOptionViewDefaultFrame;
+    
+    CGRect frame = self.tableView.frame;
+    frame.origin.y = 80.0f;
+    //self.tableView.frame = frame;
+    
+    
+    NSString *titleText = @"Sidra Forums";
+    NSString *subTitleText = @"Listing All Posts";
+    
+    [super setNavigationCustomTitleView:titleText with:subTitleText];
+    //[self updateNavigationBarTitle:@"Sidra Forums"];
+    
+    [self makeServerRequestForData:selectedHashTag withType:selectedType elementID:@"" direction:@""];
+}
+
+- (void)makeServerRequestFor_AllPost_TopConversation{
+    XLog(@"_AllPost_TopConversation-3");
+    //type = 3
+    
+    selectedType = @"3";
+    selectedHashTag = @"";
+
+    self.tableView.alpha = 0.0f;
+    
+    [self makeServerRequestForData:selectedHashTag withType:selectedType elementID:@"" direction:@""];
+}
+
+- (void)makeServerRequestFor_Topics{
+    //XLog(@"_Topics-2");
+    //type = 2
+
+    
+    selectedType = @"2";
+    selectedHashTag = @"";
+    
+    self.tableView.alpha = 0.0f;
+    conversationOptionView.alpha = 0.0f;
+    //noDataLabel.alpha = 1.0f;
+    
+    CGRect frame = self.tableView.frame;
+    frame.origin.y = 50.0f;
+    //self.tableView.frame = frame;
+    
+    NSString *titleText = @"Sidra Forums";
+    NSString *subTitleText = @"Common Conversation Topics";
+    
+    [super setNavigationCustomTitleView:titleText with:subTitleText];
+    
+    
+    [self makeServerRequestForData:selectedHashTag withType:selectedType elementID:@"" direction:@""];
+    
+    
+}
+
+- (void)makeServerRequestFor_MyPosts{
+    //XLog(@"_MyPosts-0");
+    //type = 0
+    
+    selectedType = @"0";
+    selectedHashTag = @"";
+    
+    self.tableView.alpha = 0.0f;
+    conversationOptionView.alpha = 0.0f;
+    
+    CGRect frame = self.tableView.frame;
+    frame.origin.y = 50.0f;
+    //self.tableView.frame = frame;
+    
+    NSString *titleText = @"Sidra Forums";
+    NSString *subTitleText = @"Listing My Posts";
+    
+    [super setNavigationCustomTitleView:titleText with:subTitleText];
+    
+    //[self updateNavigationBarTitle:@"Sidra Forums"];
+    
+    [self makeServerRequestForData:selectedHashTag withType:selectedType elementID:@"" direction:@""];
+}
+
+- (void)makeServerRequestFor_HashTag_LatestPost{
+    XLog(@"_HashTag_LatestPost-4");
+    //type = 4
+    
+    selectedType = @"4";
+    
+    self.tableView.alpha = 0.0f;
+    tabView.alpha = 0.0f;
+    conversationOptionView.alpha = 1.0f;
+    conversationOptionView.frame = kConversationOptionViewSecondFrame;
+    
+    CGRect frame = self.tableView.frame;
+    frame.origin.y = 30.0f;
+    //self.tableView.frame = frame;
+    
+    [self updateNavigationBarTitle:[NSString stringWithFormat:@"Conversations about\n#%@",selectedHashTag]];
+    
+    [latestPostButton setSelectedButtonTitleColorChange];
+    [topConvButton setDeSelectedButtonTitleColorChange];
+    
+    //[postButton setTitle:@"Create a post about this topic" forState:UIControlStateNormal];
+    [postButton setBackgroundImage:[UIImage imageNamed:@"create-_post_about_btn.png"] forState:UIControlStateNormal];
+    
+    [self makeServerRequestForData:selectedHashTag withType:selectedType elementID:@"" direction:@""];
+}
+
+- (void)makeServerRequestFor_HashTag_TopConversation{
+    XLog(@"_HashTag_TopConversation-3");
+    //type = 3
+    
+    
+    self.tableView.alpha = 0.0f;
+    
+    selectedType = @"3";
+    
+    [latestPostButton setDeSelectedButtonTitleColorChange];
+    [topConvButton setSelectedButtonTitleColorChange];
+    [self makeServerRequestForData:selectedHashTag withType:selectedType elementID:@"" direction:@""];
+}
+
+#pragma mark - Server Request
+- (void)makeServerRequestForData:(NSString *)tagString withType:(NSString *)type elementID:(NSString*)elementID direction:(NSString*)direction{
+    
+    noDataLabel.alpha = 1?0:0;
+    
+    [[ServerManager sharedManager] fetchForumPostList:[NSString stringWithFormat:@"%@", elementID]
+                                            tagString:tagString
+                                                 type:type
+                                      scrollDirection:direction
+                                           completion:^(BOOL success, NSMutableArray *resultDataArray) {
+                                               if (self.dataSource != NULL && self.dataSource.count>0) {
+                                                   if (success) {
+                                                       
+                                                       if ([direction integerValue]==1 || [direction isEqualToString:@""]) {
+                                                            [self.dataSource addObjectsFromArray:resultDataArray];
+                                                       }else{
+                                                           [resultDataArray addObjectsFromArray:self.dataSource];
+                                                           self.dataSource = resultDataArray;
+                                                       }
+                                                       [self.tableView reloadData];
+                                                       
+                                                   }
+                                                   else{
+                                                      
+                                                       //pageNo = -1;//Mark that no more data is available
+                                                   }
+                                               }else{
+                                                   if ([resultDataArray count]>0) {
+                                                       self.dataSource = [NSMutableArray new];
+                                                       [self.dataSource removeAllObjects];
+                                                       self.dataSource = resultDataArray;
+                                                       self.tableView.alpha = 1.0f;
+                                                       
+                                                       for(UIView *view in [[self view] subviews]) {
+                                                           // Then we will want to check that it is an instance UITableView
+                                                           // because not everything will be, the initial View will not be
+                                                           // an instance of UITableView
+                                                           if([view isKindOfClass:[UITableView class]]) {
+                                                               [view removeFromSuperview];
+                                                           }
+                                                       }
+                                                       
+                                                       [self.tableView removeFromSuperview];
+                                                       self.tableView = nil;
+                                                       CGRect frame = kTableViewPostWithOptionFrame;
+                                                       
+                                                       if ([selectedType integerValue]==4 && [selectedHashTag isEqualToString:@""]) {
+                                                           frame = kTableViewPostWithOptionFrame;
+                                                       }
+                                                       else if ([selectedType integerValue]==4 && ![selectedHashTag isEqualToString:@""]) {
+                                                           frame = kTableViewHashtagFrame;
+                                                       }
+                                                       else if ([selectedType integerValue]==3 && [selectedHashTag isEqualToString:@""]) {
+                                                           frame = kTableViewPostWithOptionFrame;
+                                                       }
+                                                       else if ([selectedType integerValue]==3 && ![selectedHashTag isEqualToString:@""]) {
+                                                           frame = kTableViewHashtagFrame;
+                                                       }
+                                                       else if ([selectedType integerValue]==2) {
+                                                           frame = kTableViewPostNoOptionFrame;
+                                                       }
+                                                       else if ([selectedType integerValue]==0) {
+                                                           frame = kTableViewPostNoOptionFrame;
+                                                       }
+                                                       
+                                                       self.tableView = [[UITableView alloc] initWithFrame:frame
+                                                                                                     style:UITableViewStylePlain];
+                                                       [self.view addSubview:self.tableView];
+                                                       
+                                                       self.tableView.delegate = self;
+                                                       self.tableView.dataSource = self;
+                                                       self.tableView.backgroundColor = [UIColor clearColor];
+                                                       [self.tableView setSeparatorStyle:UITableViewCellSeparatorStyleNone];
+                                                       
+                                                       [self.tableView reloadData];
+                                                   }else{
+                                                       noDataLabel.alpha = 1 ;
+                                                       
+                                                       /*
+                                                       CGRect frame = CGRectMake([UIScreen mainScreen].bounds.size.width/10.0,
+                                                                                 [UIScreen mainScreen].bounds.size.height/4.0 , 200, 100.0f);
+                                                       
+                                                       NSString *msg = @"No data available right now.";
+                                                       AlertPopView *alertMsg = [[AlertPopView alloc] initWithFrame:frame alertMsg:msg withDelay:0.8];
+                                                       [[UIApplication sharedApplication].keyWindow addSubview:alertMsg];
+                                                       alertMsg = nil;
+                                                      */
+                                                   }
+                                               }
+                                               isLoading = NO;
+                                               [loadingView dismisssView];
+                                               
+                                           }];
+}
+
+#pragma mark - PullDown to Refresh
+
+- (void)pullDownToRefresh{
+    if(![selectedType isEqualToString:@"2"]){
+        ForumItem *item = (ForumItem*)[self.dataSource objectAtIndex:0];
+        [self makeServerRequestForData:selectedHashTag withType:selectedType elementID:item.itemID direction:@"0"];
+        
+    }
+}
+- (void)pullUpToRefresh{
+    if(![selectedType isEqualToString:@"2"]){
+        ForumItem *item = (ForumItem*)[self.dataSource objectAtIndex:self.dataSource.count-1];
+        [self makeServerRequestForData:selectedHashTag withType:selectedType elementID:item.itemID direction:@"1"];
+    }
+}
+
+-(void)loadingPullUpView{
+    [super loadingPullUpView];
+    CGRect frame = CGRectMake(0, SCREEN_SIZE.height-40.0f-56.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+    
+}
+
+-(void) loadingPullDownView{
+    [super loadingPullDownView];
+    CGRect frame;
+    if([selectedType isEqualToString:@"2"]||[selectedType isEqualToString:@"0"]){
+        frame = CGRectMake(0, 65.0f+50.0f-2.0f, SCREEN_SIZE.width, 40.0f);
+    }else{
+        frame = CGRectMake(0, 65.0f+50.0f+30.0f, SCREEN_SIZE.width, 40.0f);
+    }
+    //CGRect frame = CGRectMake(0, 65.0f+50.0f+30.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+   
+    
+}
+
+
+
+- (void)didReceiveMemoryWarning{
+    [super didReceiveMemoryWarning];
+}
+
+
+@end
+
+
+
+
+
+
+
+
+
+
+
+

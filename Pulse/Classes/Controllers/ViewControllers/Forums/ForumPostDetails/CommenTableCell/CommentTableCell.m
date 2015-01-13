@@ -1,0 +1,165 @@
+//
+//  CommentTableCell.m
+//  Pulse
+//
+//  Created by Atomix on 7/15/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "CommentTableCell.h"
+
+@implementation CommentTableCell
+
+@synthesize whiteBgView;
+@synthesize userName;
+@synthesize postTime;
+@synthesize postDetails;
+@synthesize userPostedImages;
+@synthesize commentDeleteBtn;
+
+
+@synthesize urlView;
+@synthesize imgThumbPreView;
+@synthesize thumbTitle;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        
+      [self setSelectionStyle:UITableViewCellSelectionStyleNone];
+        
+        reuseID = reuseIdentifier;
+    
+        // Background
+        whiteBgView = [[UIView alloc] init];
+        whiteBgView.backgroundColor = [UIColor whiteColor];
+        [whiteBgView.layer setBorderColor:[[[UIColor lightGrayColor] colorWithAlphaComponent:1.0] CGColor]];
+        [whiteBgView.layer setBorderWidth:kViewBorderWidth ];
+        whiteBgView.layer.cornerRadius = kViewCornerRadius;
+        whiteBgView.clipsToBounds = YES;
+        whiteBgView.userInteractionEnabled = YES;
+        [self.contentView addSubview:whiteBgView];
+        
+        
+        userName = [[UILabel alloc] init];
+        [userName setTextColor:[UIColor blackColor]];
+        [userName setBackgroundColor:[UIColor clearColor]];
+        [userName setFont:[UIFont boldSystemFontOfSize:12]];
+        userName.numberOfLines = 1;
+        [userName setTranslatesAutoresizingMaskIntoConstraints:YES];
+        [self.contentView addSubview:userName];
+        
+        
+        postTime = [[UILabel alloc] init];
+        [postTime setTextColor:[UIColor grayColor]];
+        [postTime setBackgroundColor:[UIColor clearColor]];
+        [postTime setFont:[UIFont systemFontOfSize:10]];
+        postTime.numberOfLines = 1;
+        [postTime setTranslatesAutoresizingMaskIntoConstraints:YES];
+        [self.contentView addSubview:postTime];
+        
+        // comment text        
+        postDetails = [[STTweetLabel alloc] init];
+        [self.contentView addSubview:postDetails];
+        
+        
+        commentDeleteBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        [commentDeleteBtn setImage:[UIImage imageNamed:@"CommentCancel_Btn"] forState:UIControlStateNormal];
+        [self.contentView addSubview:commentDeleteBtn];
+        
+        
+        //user posted ImageView
+        userPostedImages = [[AsyncImageView alloc] init];
+        userPostedImages.image = [UIImage imageNamed:@"PlaceHolderImg"];
+        [self.contentView addSubview:userPostedImages];
+        
+        //------ demo url View in comment ----
+        
+        urlView = [[UIView alloc] init];
+        urlView.backgroundColor = [UIColor sidraFlatLightGrayColor];
+        [urlView.layer setBackgroundColor:[[[UIColor whiteColor] colorWithAlphaComponent:1.0] CGColor]];
+        [urlView.layer setBorderWidth:kViewBorderWidth];
+        [urlView.layer setCornerRadius:kViewCornerRadius];
+        urlView.clipsToBounds = YES;
+        [self.contentView addSubview:urlView];
+        
+        //Thumb Image
+        imgThumbPreView = [[AsyncImageView alloc] init];
+        imgThumbPreView.backgroundColor = [UIColor sidraFlatGrayColor];
+        [imgThumbPreView.layer setBackgroundColor:[[[UIColor whiteColor] colorWithAlphaComponent:1.0] CGColor]];
+        [imgThumbPreView.layer setBorderWidth:kViewBorderWidth];
+        [imgThumbPreView.layer setCornerRadius:kViewCornerRadius];
+        imgThumbPreView.clipsToBounds = YES;
+        [self.contentView addSubview:imgThumbPreView];
+        
+        //Thumb Title
+        thumbTitle = [[UILabel alloc] init];
+        thumbTitle.textColor = [UIColor blackColor];
+        thumbTitle.font = [UIFont systemFontOfSize:13];
+        thumbTitle.numberOfLines = 4;
+        [self.contentView addSubview:thumbTitle];
+        
+        
+    }
+    
+    return self;
+}
+
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    
+    CGRect whitrBgFrame = self.whiteBgView.frame;
+    whitrBgFrame.size.height = self.frame.size.height - 10 ;
+    self.whiteBgView.frame = whitrBgFrame;
+    
+    
+//    CGRect commentTextlabelFrame = self.postDetails.frame;
+//    commentTextlabelFrame.size.height = self.frame.size.height - 65 - 120;
+//    self.postDetails.frame = commentTextlabelFrame;
+//        
+//    CGRect buttonFrame = self.More_LessBtn.frame;
+//    buttonFrame.origin.y = commentTextlabelFrame.origin.y+commentTextlabelFrame.size.height - 5;
+//    self.More_LessBtn.frame = buttonFrame;
+//        
+//    CGRect ImageFrame = self.userPostedImages.frame;
+//    ImageFrame.origin.y = self.frame.size.height - 135;
+//    self.userPostedImages.frame = ImageFrame;
+//    
+//
+//    
+//      NSLog(@"kkkkkk: %f", self.userPostedImages.frame.origin.y);
+//
+//    // hidden More or less button
+//    if (self.postDetails.frame.size.height < 40.0) {
+//        
+//        self.MoreOrLessBtn.hidden = YES;
+//    }
+//    
+//    else {
+//        self.MoreOrLessBtn.hidden = NO;
+//    }
+
+ 
+}
+
+
+
+@end

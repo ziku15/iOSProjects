@@ -1,0 +1,34 @@
+//
+//  StaffTableView.h
+//  InheritUiView
+//
+//  Created by MEHEDI HASAN on 7/6/14.
+//  Copyright (c) 2014 MEHEDI.hasan. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import <MessageUI/MessageUI.h>
+#import "StaffItem.h"
+
+@class StaffTableView;
+
+@protocol StaffTableViewDelegate <NSObject>
+
+@optional
+
+-(void)updatedUIArrayDataForTableView : (StaffItem*)oneItemData;
+- (void)scrollViewScroll:(UIScrollView *)scrollView;
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView;
+@end
+
+@interface StaffTableView : UIView<UIScrollViewDelegate>
+
+- (id)initWithFrame:(CGRect)frame withArray:(NSArray *)arrayData;
+
+- (void)refreshArrayData: (NSMutableArray *)newArrayData;
+
+-(void) reloadDataTable;
+@property (nonatomic, retain) id<StaffTableViewDelegate>delegate;
+@property (nonatomic,readwrite) BOOL isSavedContactViewMode;
+
+@end

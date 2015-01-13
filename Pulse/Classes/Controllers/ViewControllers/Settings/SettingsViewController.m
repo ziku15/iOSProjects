@@ -1,0 +1,165 @@
+//
+//  SettingsViewController.m
+//  Pulse
+//
+//  Created by xibic on 6/3/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "SettingsViewController.h"
+#import "XIBSegmentControl.h"
+#import "XIBCheckBox.h"
+
+#import "LoginViewController.h"
+
+
+@interface SettingsViewController ()<XIBSegmentControlDelegate>{
+    XIBCheckBox *syncContactsCheckBox;
+    XIBCheckBox *syncEventsCheckBox;
+}
+
+@property (weak, nonatomic) IBOutlet UITextField *userNameTextField;
+@property (weak, nonatomic) IBOutlet UIButton *logoutButton;
+
+- (IBAction)logoutButtonAction:(id)sender;
+
+@end
+
+@implementation SettingsViewController
+
+- (void)didReceiveMemoryWarning{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        
+        self.title = @"Settings";
+
+        
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.offBtn.backgroundColor = [UIColor sidraFlatGrayColor];
+    if ([[SettingsManager sharedManager].pushSettings integerValue]==0) {
+        self.onBtn.hidden = NO;
+        self.offBtn.hidden = YES;
+    }else{
+        self.offBtn.hidden = NO;
+        self.onBtn.hidden = YES;
+    }
+    
+    XIBSegmentControl *segmentControlView = [[XIBSegmentControl alloc] initWithFrame:CGRectMake(10, 190, 300, 40)
+                                                                       segmentTitles:@[@"On",@"Off"]
+                                                                       selectedIndex:([[SettingsManager sharedManager].pushSettings integerValue]==0?1:0)
+                                                                           withColor:[UIColor sidraFlatDarkGrayColor]
+                                                                       withTextColor:[UIColor whiteColor]
+                                                                    andSelectedColor:[UIColor sidraFlatTurquoiseColor]];
+    segmentControlView.delegate = self;
+    //[self.view addSubview:segmentControlView];
+    
+    
+    UILabel * versionLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, self.view.bounds.size.height-80-self.navigationController.navigationBar.frame.size.height, self.view.frame.size.width,50)];
+    versionLabel.numberOfLines = 2;
+    versionLabel.textAlignment = NSTextAlignmentCenter;
+    versionLabel.text = @"Sidra Pulse version 1.5\nReleased: September 20, 2015";
+    versionLabel.font = [UIFont systemFontOfSize:17.0f];
+    versionLabel.textColor = [UIColor sidraFlatGrayColor];
+    [self.view addSubview:versionLabel];
+    
+    self.logoutButton.backgroundColor = [UIColor sidraFlatDarkGrayColor];
+    
+    syncContactsCheckBox = [[XIBCheckBox alloc] initWithFrame:CGRectMake(10, 273, 20, 20)
+                                                 withSelector:@selector(contactsSyncCheckBoxAction) andTarget:self];
+    //[self.view addSubview:syncContactsCheckBox];
+    
+    syncEventsCheckBox = [[XIBCheckBox alloc] initWithFrame:CGRectMake(10, 333, 20, 20)
+                                                 withSelector:@selector(eventsSyncCheckBoxAction) andTarget:self];
+    //[self.view addSubview:syncEventsCheckBox];
+    self.userNameTextField.text = [NSString stringWithFormat:@"%@",[UserManager sharedManager].userName];
+    
+}
+
+- (void)contactsSyncCheckBoxAction{
+    [syncContactsCheckBox setCheckBoxSelected:!syncContactsCheckBox.isSelected];
+}
+
+- (void)eventsSyncCheckBoxAction{
+    [syncEventsCheckBox setCheckBoxSelected:!syncEventsCheckBox.isSelected];
+}
+
+# pragma Push notification on/off
+-(IBAction)onBtnAction:(UIButton*)sender{
+    [SettingsManager sharedManager].pushSettings = @"1";
+    [self changePushNotificationSettings];
+    
+    
+}
+-(IBAction)offBtnAction:(UIButton*)sender{
+    [SettingsManager sharedManager].pushSettings = @"0";
+    [self changePushNotificationSettings];
+    
+}
+-(void) changePushNotificationSettings{
+if ([[SettingsManager sharedManager].pushSettings integerValue]==0) {
+    self.onBtn.hidden = NO;
+    self.offBtn.hidden = YES;
+}else{
+    self.offBtn.hidden = NO;
+    self.onBtn.hidden = YES;
+}
+}
+
+#pragma mark - XIBSegmentControlDelegate
+- (void)selectedButtonAtIndex:(int)index{
+    // 0 = on -- send server value - 1
+    // 1 = off -- send server value - 0
+    //XLog(@"Selected Index: %d = PUSH : %d",index,[[SettingsManager sharedManager].pushSettings integerValue]);
+    if ([[SettingsManager sharedManager].pushSettings integerValue] == index) {
+        [[ServerManager sharedManager] updatePushStatus:index==1?@"0":@"1" completion:^(BOOL success) {
+            if (success) {
+                [SettingsManager sharedManager].pushSettings = index==1?@"0":@"1";
+            }
+        }];
+    }
+}
+
+
+- (IBAction)logoutButtonAction:(id)sender {
+    [[ServerManager sharedManager] logOutUser:^(BOOL success) {
+        if (success) {
+            LoginViewController *loginView = [[LoginViewController alloc] initWithNibName:@"LoginViewController" bundle:nil];
+            [self.navigationController presentViewController:loginView animated:YES completion:^{
+                [self.navigationController popToRootViewControllerAnimated:YES];
+            }];
+            loginView = nil;
+        }
+    }];
+    /*
+    [[ServerManager sharedManager] addClassifiedWithCatID:@"3"
+                                           title:@"Does Evolution Explain Religious Beliefs? #2"
+                                     description:@"This is the eighth in a series of interviews about religion that I am conducting for The Stone. The interviewee for this installment is Michael Ruse, a professor of philosophy at Florida State University and the author of the forthcoming book Atheism: What Everyone Needs to Know."
+                                           photo:@[@"140496404010397981_662617793826868_56480279239687492_n.jpg",@"1404964064images (3).jpeg",@"1404964083images (1).jpeg"]
+                                         isDraft:@"1"
+                                      completion:^(BOOL success) {
+                                          if (success) {
+                                              NSLog(@"Classified Posted");
+                                          }else{
+                                              NSLog(@"Classified Not Posted");
+                                          }
+    //
+                                      }];
+     */
+    
+    
+}
+@end
+
+//http://stackoverflow.com/questions/16895585/sync-iphone-calendar-with-your-application

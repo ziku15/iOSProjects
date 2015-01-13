@@ -1,0 +1,66 @@
+//
+//  XIBLoadingView.m
+//  Pulse
+//
+//  Created by Ziku-Atomix on 10/31/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "XIBLoadingView.h"
+
+@implementation XIBLoadingView{
+    UILabel * loadingLbl;
+}
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect {
+    // Drawing code
+}
+*/
+@synthesize isRefreshing;
+
+-(id) initWithFrame:(CGRect)frame{
+    self = [super initWithFrame:frame];
+    self.backgroundColor = [UIColor colorWithWhite:0.4f alpha:0.5f];
+    isRefreshing = false;
+    
+    //self.alpha = 0.0f;
+    self.activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    CGRect frame2 = self.activityIndicator.frame;
+    frame2.origin.y = 10.0f;
+    frame2.origin.x = 100.0f;
+    self.activityIndicator.frame = frame2;
+    self.activityIndicator.hidesWhenStopped = YES;
+    self.activityIndicator.alpha = 0.0f;
+    
+    [self addSubview:self.activityIndicator];
+    
+    loadingLbl = [[UILabel alloc] initWithFrame:CGRectMake(140.0f, 5.0f, SCREEN_SIZE.width*2/3, 30.0f)];
+    loadingLbl.text = @"Loading... ";
+    loadingLbl.font = [UIFont systemFontOfSize:14.0f];
+    [loadingLbl setTextColor:[UIColor whiteColor]];
+    loadingLbl.alpha = 0.0f;
+    [self addSubview:loadingLbl];
+    
+    return self;
+}
+
+
+
+-(void)dismisssView{
+    isRefreshing = false;
+    loadingLbl.alpha = 0.0f;
+    [self.activityIndicator stopAnimating];
+    [self removeFromSuperview];
+}
+
+-(void) apeareLoadingView{
+    isRefreshing = true;
+    self.activityIndicator.alpha = 1.0f;
+    [self.activityIndicator startAnimating];
+    loadingLbl.alpha = 1.0f;
+}
+
+@end

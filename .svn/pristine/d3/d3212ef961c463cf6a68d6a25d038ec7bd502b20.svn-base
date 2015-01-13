@@ -1,0 +1,89 @@
+//
+//  VideoPreViewController.m
+//  Pulse
+//
+//  Created by Atomix on 8/18/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "VideoPreViewController.h"
+
+@interface VideoPreViewController ()<UIWebViewDelegate, UIAlertViewDelegate>
+
+@end
+
+@implementation VideoPreViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+
+- (void)viewDidLoad{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+
+    if (([self.videoLink rangeOfString:@"https://"].location != NSNotFound)){
+        self.videoLink = [self.videoLink stringByReplacingCharactersInRange:NSMakeRange(4,1) withString:@""];
+    }
+    
+    if (([self.videoLink rangeOfString:@"http://"].location == NSNotFound)){
+        self.videoLink = [NSString stringWithFormat:@"http://%@",self.videoLink];
+    }
+    
+    XLog(@"%@",self.videoLink);
+    
+    UIWebView *videoWebView = [[UIWebView alloc] initWithFrame:CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, [[UIScreen mainScreen] bounds].size.height - 65)];
+    
+    NSString *url = self.videoLink;
+    NSURL *nsurl = [NSURL URLWithString:url];
+    NSURLRequest *urlReq = [NSURLRequest requestWithURL:nsurl];
+    videoWebView.delegate = self;
+    [videoWebView loadRequest:urlReq ];
+    [self.view addSubview:videoWebView];
+  
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+#pragma mark - UIWebView Delegate
+
+-(void)webViewDidStartLoad:(UIWebView *)webView {
+    XLog(@"start");
+    [XIBWebActivityIndicator startActivity:self];
+}
+
+-(void)webViewDidFinishLoad:(UIWebView *)webView {
+    XLog(@"finish");
+    [XIBWebActivityIndicator dismissActivity];
+}
+/*
+- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType{
+    return YES;
+}
+*/
+-(void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
+    XLog(@"Error for WEBVIEW: %@", [error description]);
+    [XIBWebActivityIndicator dismissActivity];
+    
+    NSString *_msg = @"Web address is not valid";
+    UIAlertView *_alertMsg = [[UIAlertView alloc] initWithTitle:_msg message:nil delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    [_alertMsg show];
+}
+#pragma mark - UIAlertView Delegate 
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (buttonIndex==0) {
+        [self.navigationController popViewControllerAnimated:YES];
+    }
+}
+
+@end

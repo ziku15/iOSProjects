@@ -1,0 +1,14 @@
+//
+//  StaffSearchViewController.h
+//  Pulse
+//
+//  Created by xibic on 7/7/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface StaffSearchViewController : CommonViewController
+@property (nonatomic,strong) NSArray *staffArray;
+@property (nonatomic,strong) NSString *searchKey;
+@end

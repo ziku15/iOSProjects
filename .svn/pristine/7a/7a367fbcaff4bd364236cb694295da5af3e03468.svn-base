@@ -1,0 +1,104 @@
+//
+//  NewsTableCell.m
+//  Pulse
+//
+//  Created by Atomix on 7/10/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "NewsTableCell.h"
+
+@implementation NewsTableCell
+
+@synthesize headLineText;
+@synthesize bgView;
+@synthesize releaseDate;
+@synthesize source;
+@synthesize sourceName;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        
+        reuseID = reuseIdentifier;
+        
+        
+        // Background
+        bgView = [[UIView alloc] init];
+        bgView.backgroundColor = [UIColor whiteColor];
+        
+        //To make the border look very close to a UITextField
+        [bgView.layer setBorderColor:kViewBorderColor];
+        [bgView.layer setBorderWidth:kViewBorderWidth];
+        
+        //The rounded corner part, where you specify your view's corner radius:
+        bgView.layer.cornerRadius = kViewCornerRadius;
+        bgView.clipsToBounds = YES;
+        
+        [self.contentView addSubview:bgView];
+        
+        
+        // HeadLine
+        headLineText = [[UILabel alloc] init];
+        [headLineText setTextColor:[UIColor darkGrayColor ]];
+        [headLineText setBackgroundColor:[UIColor clearColor]];
+        [headLineText setFont:[UIFont systemFontOfSize:11]];
+        [headLineText setTextAlignment:NSTextAlignmentLeft];
+        [headLineText setTranslatesAutoresizingMaskIntoConstraints:YES];
+        headLineText.numberOfLines = 2;
+        [self.contentView addSubview:headLineText];
+        
+        //Date
+        releaseDate = [[UILabel alloc] init];
+        [releaseDate setTextColor:[UIColor redColor ]];
+        [releaseDate setBackgroundColor:[UIColor clearColor]];
+        [releaseDate setFont:[UIFont systemFontOfSize:9]];
+        [releaseDate setTextAlignment:NSTextAlignmentLeft];
+        [releaseDate setTranslatesAutoresizingMaskIntoConstraints:YES];
+        [self.contentView addSubview:releaseDate];
+        
+        
+        //Source
+        source = [[UILabel alloc] init];
+        [source setTextColor:[UIColor lightGrayColor ]];
+        [source setBackgroundColor:[UIColor clearColor]];
+        [source setFont:[UIFont systemFontOfSize:10]];
+        [source setTextAlignment:NSTextAlignmentLeft];
+        [source setTranslatesAutoresizingMaskIntoConstraints:YES];
+         source.textAlignment = NSTextAlignmentLeft;
+         source.text = @"Source:";
+        [self.contentView addSubview:source];
+        
+        
+        //Source Name
+        sourceName = [[UILabel alloc] init];
+        [sourceName setTextColor:[UIColor sidraFlatTurquoiseColor ]];
+        [sourceName setBackgroundColor:[UIColor clearColor]];
+        [sourceName setFont:[UIFont systemFontOfSize:10]];
+        [sourceName setTextAlignment:NSTextAlignmentLeft];
+        [sourceName setTranslatesAutoresizingMaskIntoConstraints:YES];
+         sourceName.textAlignment = NSTextAlignmentLeft;
+        [self.contentView addSubview:sourceName];
+        
+        
+
+        
+    }
+    return self;
+}
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

@@ -1,0 +1,408 @@
+//
+//  ELCAssetTablePicker.m
+//
+//  Created by ELC on 2/15/11.
+//  Copyright 2011 ELC Technologies. All rights reserved.
+//
+
+#import "ELCAssetTablePicker.h"
+#import "ELCAssetCell.h"
+#import "ELCAsset.h"
+#import "ELCAlbumPickerController.h"
+
+@interface ELCAssetTablePicker (){
+    UIView *footerView;
+}
+
+@property (nonatomic, assign) int columns;
+
+@end
+
+@implementation ELCAssetTablePicker
+
+//Using auto synthesizers
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        //Sets a reasonable default bigger then 0 for columns
+        //So that we don't have a divide by 0 scenario
+        self.columns = 4;
+        
+
+    }
+    return self;
+}
+
+-(void)createFooterView{
+    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
+
+    //
+    footerView = [[FooterView alloc] initWithFrame:CGRectMake(0, SCREEN_SIZE.height - 36, SCREEN_SIZE.width, 36) withIdentity:2 withParent:self];
+    [[appDelegate window] addSubview:footerView];
+    
+//    OBShapedButton *cancelButton = [UIButton buttonWithType:UIButtonTypeCustom];
+//    [cancelButton setBackgroundImage:[UIImage imageNamed:@"cla_cancel_btn.png"] forState:UIControlStateNormal];
+//    [cancelButton addTarget:self
+//               action:@selector(cancelAction:)
+//     forControlEvents:UIControlEventTouchUpInside];
+//    cancelButton.frame = CGRectMake(footerView.frame.origin.x, 0.0, footerView.frame.size.width / 2, footerView.frame.size.height);
+//    [footerView addSubview:cancelButton];
+//    
+//    OBShapedButton *doneButton = [UIButton buttonWithType:UIButtonTypeCustom];
+//    [doneButton setBackgroundImage:[UIImage imageNamed:@"cla_ok_btn.png"] forState:UIControlStateNormal];
+//    [doneButton addTarget:self
+//               action:@selector(doneButtonMethod:)
+//     forControlEvents:UIControlEventTouchUpInside];
+//    doneButton.frame = CGRectMake(cancelButton.frame.origin.x + cancelButton.frame.size.width, cancelButton.frame.origin.y, cancelButton.frame.size.width, cancelButton.frame.size.height);
+//    [footerView addSubview:doneButton];
+
+}
+
+#pragma mark - footer delegate
+-(void)leftButtonAction{
+//    [self removeScreenView];
+    //[self.navigationController popViewControllerAnimated:YES];
+    [self doneAction];
+}
+
+-(void)rightButtonMethod{
+    [self doneAction];
+}
+
+//-(IBAction)cancelAction:(id)sender{
+//
+//    [self removeScreenView];
+//    //[self.navigationController popViewControllerAnimated:YES];
+//    [self doneAction:sender];
+//}
+//
+//
+//-(IBAction)doneButtonMethod:(id)sender{
+//    [self doneAction:sender];
+//}
+
+-(void)removeScreenView{
+    [footerView removeFromSuperview];
+    footerView = nil;
+}
+
+- (void)doneAction
+{
+    [self removeScreenView];
+    
+	NSMutableArray *selectedAssetsImages = [[NSMutableArray alloc] init];
+    
+	for (ELCAsset *elcAsset in self.elcAssets) {
+		if ([elcAsset selected]) {
+			[selectedAssetsImages addObject:[elcAsset asset]];
+		}
+	}
+    [self.parent selectedAssets:selectedAssetsImages];
+}
+
+
+#pragma mark - Image Picker
+-(void)showcamera{
+    UIImagePickerController *controller = [[UIImagePickerController alloc] init];
+    controller.sourceType = UIImagePickerControllerSourceTypeCamera;
+    controller.allowsEditing = NO;
+    controller.mediaTypes = [UIImagePickerController availableMediaTypesForSourceType: UIImagePickerControllerSourceTypeCamera];
+    controller.delegate = self;
+    [self presentViewController: controller animated: YES completion: nil];
+}
+
+-(void)openCamera{
+    
+    if ([UIImagePickerController isSourceTypeAvailable: UIImagePickerControllerSourceTypeCamera])
+    {
+        [self removeScreenView];
+        [self performSelector:@selector(showcamera) withObject:nil afterDelay:0.3];
+    }
+}
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info
+{
+    [self dismissViewControllerAnimated: YES completion: nil];
+    UIImage *image = [info valueForKey: UIImagePickerControllerOriginalImage];
+    //NSData *imageData = UIImageJPEGRepresentation(image, 0.1);
+    [self savePhoto:image];
+}
+
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker;
+{
+    [self refreshTableviewData];
+    [self dismissViewControllerAnimated: YES completion: nil];
+}
+
+#pragma mark - Save Image Delegate
+
+-(void)refreshTableviewData{
+    [self performSelectorInBackground:@selector(preparePhotos) withObject:nil];
+    
+
+}
+
+- (void) savePhoto:(UIImage *)image {
+    [XIBActivityIndicator startActivity];
+    
+    NSParameterAssert(image);
+
+    //save image date in a compilation block
+    UIImageWriteToSavedPhotosAlbum(image,
+                                   self, // send the message to 'self' when calling the callback
+                                   @selector(thisImage:hasBeenSavedInPhotoAlbumWithError:usingContextInfo:), // the selector to tell the method to call on completion
+                                   NULL); // you generally won't need a contextInfo here
+    
+    //    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+}
+
+- (void)thisImage:(UIImage *)image hasBeenSavedInPhotoAlbumWithError:(NSError *)error usingContextInfo:(void*)ctxInfo {
+    if (error) {
+        // Do anything needed to handle the error or display it to the user
+        [XIBActivityIndicator dismissActivity];
+        [[[UIAlertView alloc] initWithTitle:IMAGE_SAVING_ERROR_MESSAGE message:@"" delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil, nil] show];
+    } else {
+        // .... do anything you want here to handle
+        // .... when the image has been saved in the photo album
+        //        [self refreshTableviewData];
+
+        [self performSelector:@selector(refreshTableviewDataAfterSaveImage) withObject:nil afterDelay:1];
+    }
+}
+-(void)refreshTableviewDataAfterSaveImage{
+    [XIBActivityIndicator dismissActivity];
+    [self performSelectorInBackground:@selector(preparePhotos) withObject:nil];
+//    [self createFooterView];
+}
+#pragma mark - --------------
+- (void)viewDidLoad
+{
+
+    [self createFooterView];
+    
+    [self.tableView setSeparatorStyle:UITableViewCellSeparatorStyleNone];
+	[self.tableView setAllowsSelection:NO];
+
+    NSMutableArray *tempArray = [[NSMutableArray alloc] init];
+    self.elcAssets = tempArray;
+	
+    if (self.immediateReturn) {
+        
+    } else {
+        [self addCustomCameraButton];
+//        UIBarButtonItem *doneButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(openCamera)];
+//        [self.navigationItem setRightBarButtonItem:doneButtonItem];
+        
+        [self.navigationItem setTitle:@"Loading..."];
+        
+//        UIBarButtonItem *cancelButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancelAction:)];
+//        [self.navigationItem setLeftBarButtonItem:cancelButtonItem];
+        [self addCustomBackButton];
+    }
+
+//	[self refreshTableviewData];
+    [self performSelector:@selector(refreshTableviewData) withObject:nil afterDelay:0.3];
+}
+
+- (void)addCustomBackButton{
+    //Back Button
+    OBShapedButton *backButton = [OBShapedButton buttonWithType:UIButtonTypeCustom];
+    [backButton setFrame:CGRectMake(0.0f, 0.0f, 33.0f,30.0f)];
+    [backButton setImage:[UIImage imageNamed:@"back_btn.png"] forState:UIControlStateNormal];
+    [backButton addTarget:self
+                   action:@selector(doneAction)
+         forControlEvents:UIControlEventTouchUpInside];
+    UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:backButton];
+    UIBarButtonItem *negativeSpacer = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace
+                                                                                    target:nil action:nil];
+    negativeSpacer.width = -10;
+    [self.navigationItem setLeftBarButtonItems:[NSArray arrayWithObjects:negativeSpacer, barButton, nil]];
+    //self.navigationItem.leftBarButtonItem = barButton;
+}
+
+- (void)addCustomCameraButton{
+    //Back Button
+    OBShapedButton *backButton = [OBShapedButton buttonWithType:UIButtonTypeCustom];
+    [backButton setFrame:CGRectMake(0.0f, 0.0f, 50.0f,50.0f)];
+    [backButton setImage:[UIImage imageNamed:@"cam_icon.png"] forState:UIControlStateNormal];
+    [backButton addTarget:self
+                   action:@selector(openCamera)
+         forControlEvents:UIControlEventTouchUpInside];
+    UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:backButton];
+    self.navigationItem.rightBarButtonItem = barButton;
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    self.columns = self.view.bounds.size.width / 80;
+}
+- (void)viewDidAppear:(BOOL)animated
+{
+    [self.tableView setFrame:CGRectMake(self.tableView.frame.origin.x, self.tableView.frame.origin.y, self.tableView.frame.size.width, SCREEN_SIZE.height - 36)];
+    
+
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
+{
+    return YES;
+}
+
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+    [super didRotateFromInterfaceOrientation:fromInterfaceOrientation];
+    self.columns = self.view.bounds.size.width / 80;
+    [self.tableView reloadData];
+}
+
+- (void)preparePhotos
+{
+    @autoreleasepool {
+
+        [self.assetGroup enumerateAssetsUsingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
+            
+            if (result == nil) {
+                return;
+            }
+
+            ELCAsset *elcAsset = [[ELCAsset alloc] initWithAsset:result];
+            [elcAsset setParent:self];
+            
+            BOOL isAssetFiltered = NO;
+            if (self.assetPickerFilterDelegate &&
+               [self.assetPickerFilterDelegate respondsToSelector:@selector(assetTablePicker:isAssetFilteredOut:)])
+            {
+                isAssetFiltered = [self.assetPickerFilterDelegate assetTablePicker:self isAssetFilteredOut:(ELCAsset*)elcAsset];
+            }
+
+            if (!isAssetFiltered) {
+                [self.elcAssets addObject:elcAsset];
+            }
+
+         }];
+
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            [self.tableView reloadData];
+            // scroll to bottom
+            long section = [self numberOfSectionsInTableView:self.tableView] - 1;
+            long row = [self tableView:self.tableView numberOfRowsInSection:section] - 1;
+            if (section >= 0 && row >= 0) {
+                NSIndexPath *ip = [NSIndexPath indexPathForRow:row
+                                                     inSection:section];
+                        [self.tableView scrollToRowAtIndexPath:ip
+                                              atScrollPosition:UITableViewScrollPositionBottom
+                                                      animated:NO];
+            }
+            
+            [self.navigationItem setTitle:self.singleSelection ? @"Camera Roll" : @"Camera Roll"];
+
+        });
+    }
+}
+
+
+
+
+- (BOOL)shouldSelectAsset:(ELCAsset *)asset
+{
+    NSUInteger selectionCount = 0;
+    for (ELCAsset *elcAsset in self.elcAssets) {
+        if (elcAsset.selected) selectionCount++;
+    }
+    BOOL shouldSelect = YES;
+    if ([self.parent respondsToSelector:@selector(shouldSelectAsset:previousCount:)]) {
+        shouldSelect = [self.parent shouldSelectAsset:asset previousCount:selectionCount];
+    }
+    return shouldSelect;
+}
+
+- (void)assetSelected:(ELCAsset *)asset
+{
+    if (self.singleSelection) {
+
+        for (ELCAsset *elcAsset in self.elcAssets) {
+            if (asset != elcAsset) {
+                elcAsset.selected = NO;
+            }
+        }
+    }
+    if (self.immediateReturn) {
+        NSArray *singleAssetArray = @[asset.asset];
+        [(NSObject *)self.parent performSelector:@selector(selectedAssets:) withObject:singleAssetArray afterDelay:0];
+    }
+}
+
+#pragma mark UITableViewDataSource Delegate Methods
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    // Return the number of sections.
+    return 1;
+}
+
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    if (self.columns <= 0) { //Sometimes called before we know how many columns we have
+        self.columns = 4;
+    }
+    NSInteger numRows = ceil([self.elcAssets count] / (float)self.columns);
+    return numRows;
+}
+
+- (NSArray *)assetsForIndexPath:(NSIndexPath *)path
+{
+    long index = path.row * self.columns;
+    long length = MIN(self.columns, [self.elcAssets count] - index);
+    return [self.elcAssets subarrayWithRange:NSMakeRange(index, length)];
+}
+
+// Customize the appearance of table view cells.
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{    
+    static NSString *CellIdentifier = @"Cell";
+        
+    ELCAssetCell *cell = (ELCAssetCell*)[tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+
+    if (cell == nil) {		        
+        cell = [[ELCAssetCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+        [cell.contentView setBackgroundColor:[UIColor clearColor]];
+        [cell setBackgroundColor:[UIColor clearColor]];
+    }
+    
+    [cell setAssets:[self assetsForIndexPath:indexPath]];
+    
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+	return 79;
+}
+
+
+//- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section
+//{
+//    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, SCREEN_SIZE.height - 100, SCREEN_SIZE.width, 36)];
+//    
+//    return view;
+//}
+
+- (int)totalSelectedAssets
+{
+    int count = 0;
+    
+    for (ELCAsset *asset in self.elcAssets) {
+		if (asset.selected) {
+            count++;	
+		}
+	}
+    
+    return count;
+}
+
+
+@end

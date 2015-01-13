@@ -1,0 +1,99 @@
+//
+//  ServerManager.h
+//  Pulse
+//
+//  Created by xibic on 6/20/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface ServerManager : NSObject
+
+@property (nonatomic, readwrite) BOOL isNetworkAvailable;
+
++ (ServerManager *)sharedManager;
+
+
+- (BOOL)checkForNetworkAvailability;
+
+/* ***** API ***** */
+
+typedef void (^api_Completion_Handler_Status)(BOOL success);
+typedef void (^api_Completion_Handler_Data)(BOOL success, NSMutableArray *resultDataArray);
+//1
+- (void) checkForUserAuthentication:(api_Completion_Handler_Status)completion;
+//1
+- (void) loginUser:(NSString*)userName password:(NSString*)userPass completion:(api_Completion_Handler_Data)completion;
+//2
+- (void) updatePushStatus:(NSString*)statusString completion:(api_Completion_Handler_Status)completion;
+//3
+- (void) fetchAllNotifications:(api_Completion_Handler_Data)completion;
+//4
+- (void) fetchAnnouncements:(NSString*)pageIndex completion:(api_Completion_Handler_Data)completion;
+//5
+- (void) fetchStaffDirectoryDepartments:(api_Completion_Handler_Data)completion;
+//6
+- (void) fetchStaffDirectoryStaffs:(NSString*)pageIndex deptID:(NSString*)deptID completion:(api_Completion_Handler_Data)completion;
+//7
+- (void) fetchEvents:(NSString*)pageIndex type:(NSString*)type date:(NSString*)date completion:(api_Completion_Handler_Data)completion;
+//8
+- (void) favoriteEvent:(NSString*)isFav eventID:(NSString*)eventID completion:(api_Completion_Handler_Status)completion;
+//9
+- (void) fetchGalleryAlbumList:(NSString*)pageIndex year:(NSString*)year completion:(api_Completion_Handler_Data)completion;
+//10
+- (void) fetchGalleryAlbumImageList:(NSString*)pageIndex galleryID:(NSString*)galleryID completion:(api_Completion_Handler_Data)completion;
+//11
+- (void) fetchSidraInNews:(NSString*)pageIndex completion:(api_Completion_Handler_Data)completion;
+//12
+- (void) fetchPressReleases:(NSString*)pageIndex completion:(api_Completion_Handler_Data)completion;
+//13
+- (void) fetchHRCategory:(NSString*)pageIndex completion:(api_Completion_Handler_Data)completion;
+//14
+- (void) fetchHRDetails:(NSString*)pageIndex hrCatID:(NSString*)hrCatID completion:(api_Completion_Handler_Data)completion;
+//15
+- (void) fetchOffersAndPromotions:(NSString*)pageIndex category:(NSString*)cat_id type:(NSString*)type completion:(api_Completion_Handler_Data)completion;
+//16
+- (void) favoriteOffersAndPromotions:(NSString*)offerID isFavorite:(NSString*)isFav completion:(api_Completion_Handler_Status)completion;
+//17
+- (void) fetchClassifieds:(NSString*)pageIndex type:(NSString*)type category:(NSString*)cat_id completion:(api_Completion_Handler_Data)completion;
+//18
+- (void) fetchClassifiedCategories:(api_Completion_Handler_Data)completion;
+//19
+- (void) uploadClassifiedPhoto:(api_Completion_Handler_Status)completion;
+//20
+- (void) addClassifiedWithCatID:(NSString*)catID title:(NSString*)title description:(NSString*)description photo:(NSArray*)photos isDraft:(NSString*)isDraft completion:(api_Completion_Handler_Status)completion;
+//21
+- (void) fetchForumTags:(NSString*)pageIndex completion:(api_Completion_Handler_Data)completion;
+//22
+- (void) fetchForumPostList:(NSString*)pageIndex tagString:(NSString*)tagString type:(NSString*)type completion:(api_Completion_Handler_Data)completion;
+//23
+- (void) uploadForumThreadPhotos:(api_Completion_Handler_Status)completion;
+//24
+- (void) addForumThread:(NSString*)text tags:(NSArray*)tags photo:(NSArray*)photos completion:(api_Completion_Handler_Status)completion;
+//25
+- (void) fetchPolicyDepartments:(api_Completion_Handler_Data)completion;
+//26
+- (void) fetchPolicyDetails:(NSString*)deptID completion:(api_Completion_Handler_Data)completion;
+//27
+- (void) deleteItem:(NSString*)elementID type:(NSString*)type completion:(api_Completion_Handler_Status)completion;
+//28
+- (void) updateReadStatusForItem:(NSString*)elementID type:(NSString*)type completion:(api_Completion_Handler_Status)completion;
+//29
+- (void) fetchOffersAndPromotionsCategories:(api_Completion_Handler_Data)completion;
+//30
+- (void) addForumComment:(NSString*)forumID commentText:(NSString*)text photo:(NSArray*)photos completion:(api_Completion_Handler_Data)completion;
+//31
+- (void) logOutUser:(api_Completion_Handler_Status)completion;
+//32
+- (void) updateBubbleNotificationStatus:(NSString*)type completion:(api_Completion_Handler_Status)completion;
+//33
+- (void) fetchStaffSearchResults:(NSString*)keyWord deptID:(NSString*)deptID completion:(api_Completion_Handler_Data)completion;
+//34
+- (void) favoriteStaff:(NSString*)staffID isBookmark:(NSString*)isBookmark completion:(api_Completion_Handler_Status)completion;
+//35
+- (void) updateClassifiedWithCatID:(NSString*)catID classifiedID:(NSString*)classifiedID title:(NSString*)title description:(NSString*)description photo:(NSArray*)photos isDraft:(NSString*)isDraft completion:(api_Completion_Handler_Status)completion;
+//36
+- (void) fetchGalleryAlbumYearList:(api_Completion_Handler_Data)completion;
+
+@end

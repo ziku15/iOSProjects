@@ -1,0 +1,334 @@
+//
+//  PreviewClassifiedViewController.m
+//  Pulse
+//
+//  Created by Supran on 7/7/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "PreviewClassifiedViewController.h"
+
+@interface PreviewClassifiedViewController (){
+    PopupView *popUpView;
+    FooterView *footerview;
+    UIScrollView *mainScrollview;
+}
+
+@end
+
+@implementation PreviewClassifiedViewController
+@synthesize postClassifiedItem;
+
+//- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+//{
+//    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+//    if (self) {
+//        // Custom initialization
+//    }
+//    return self;
+//}
+
+-(id)init:(PostClassifiedItem *)item{
+    self = [super init];
+    if (self) {
+        [super setNavigationCustomTitleView:@"Classifieds" with:@"Classified item preview"];
+        postClassifiedItem = item;
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+    [self createLeavePopupview];
+    [self createFooterview];
+    
+    
+    //Create main Scrollview
+    mainScrollview = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height - (64 + footerview.frame.size.height) )];
+    [mainScrollview setContentSize:CGSizeMake(mainScrollview.frame.size.width, mainScrollview.frame.size.height)];
+    [mainScrollview setBackgroundColor:[UIColor whiteColor]];
+    [self.view addSubview:mainScrollview];
+    
+    UIView *titleView = [self createTitleView];
+    UILabel *dateLabel = [self createDateView:titleView];
+    UILabel *categoryLabel = [self createCategoryView:dateLabel];
+    UIView *detailsView = [self createDescriptionView:categoryLabel];
+    
+    //Create image View
+    CGRect newCreateFrame = CGRectMake(detailsView.frame.origin.x, detailsView.frame.origin.y + detailsView.frame.size.height + 15, detailsView.frame.size.width, 160);
+    XIBPhotoScrollView *imageScroller = [self addPhotoScrollView:newCreateFrame];
+    [mainScrollview setContentSize:CGSizeMake(imageScroller.frame.size.width, imageScroller.frame.size.height + imageScroller.frame.origin.y + 20)];
+    
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+#pragma mark - Photo Carousel
+- (XIBPhotoScrollView *)addPhotoScrollView:(CGRect)frame{
+    
+    NSMutableArray *photosArray = [NSMutableArray arrayWithArray:postClassifiedItem.photosArray];
+    //photosArray = postClassifiedItem.photosArray;
+    
+    XIBPhotoScrollView *photoScrollView = [[XIBPhotoScrollView alloc] initWithFrame:frame withPhotos:photosArray];
+    [mainScrollview addSubview:photoScrollView];
+    
+    return photoScrollView;
+}
+
+#pragma mark - Description View
+-(UIView *)createDescriptionView:(UILabel *)previousLabel{
+    
+    // Create Details label
+    CommonDynamicCellModel *detailsDetails = [[CommonHelperClass sharedConstants] calculateLabelMaxSize:postClassifiedItem.description with:[UIFont systemFontOfSize:15.0f] with:300];
+    
+    
+    UIView *detailsView = [[UIView alloc] initWithFrame:CGRectMake(previousLabel.frame.origin.x, previousLabel.frame.origin.y+ previousLabel.frame.size.height + 10, 300, (detailsDetails.maxSize.height + 10 < 120?120:detailsDetails.maxSize.height + 10))];
+    //[detailsView setBackgroundColor:[UIColor whiteColor]];
+    detailsView.layer.borderColor = kViewBorderColor;
+    detailsView.layer.borderWidth = kViewBorderWidth;
+    detailsView.layer.cornerRadius = kSubViewCornerRadius;
+    detailsView.layer.masksToBounds = YES;
+    [mainScrollview addSubview:detailsView];
+    
+    UILabel *detailsLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 5, detailsView.frame.size.width - 10, detailsDetails.maxSize.height)];
+    detailsLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    detailsLabel.numberOfLines = 0;
+    [detailsLabel setFont:detailsDetails.maxFont];
+    [detailsLabel setTextColor:[UIColor sidraFlatDarkGrayColor]];
+    [detailsLabel setText:detailsDetails.maxTitle];
+    [detailsLabel setBackgroundColor:[UIColor clearColor]];
+    [detailsView addSubview:detailsLabel];
+    
+    return detailsView;
+}
+
+#pragma mark - Category View
+-(UILabel *)createCategoryView:(UILabel *)previousLabel{
+    // Create date label
+    UILabel *categoryLabel = [[UILabel alloc] initWithFrame:CGRectMake(previousLabel.frame.origin.x, previousLabel.frame.origin.y+ previousLabel.frame.size.height , previousLabel.frame.size.width, previousLabel.frame.size.height)];
+    //[categoryLabel setBackgroundColor:[UIColor whiteColor]];
+    [categoryLabel setFont:[UIFont systemFontOfSize:12.0f]];
+    [categoryLabel setTextColor:[UIColor sidraFlatDarkGrayColor]];
+    [categoryLabel setText:[NSString stringWithFormat:@"Category : %@", postClassifiedItem.cat_Name]];
+    [mainScrollview addSubview:categoryLabel];
+    
+    return categoryLabel;
+}
+
+#pragma mark - Date View
+-(UILabel *)createDateView:(UIView *)previousView{
+    // Create date label
+    UILabel *dateLabel = [[UILabel alloc] initWithFrame:CGRectMake(previousView.frame.origin.x, previousView.frame.origin.y+ previousView.frame.size.height + 10, previousView.frame.size.width, 18)];
+    //[dateLabel setBackgroundColor:[UIColor whiteColor]];
+    [dateLabel setTextColor:[UIColor sidraFlatRedColor]];
+    [dateLabel setFont:[UIFont systemFontOfSize:12.0f]];
+    [dateLabel setText:[[CommonHelperClass sharedConstants] getSystemDate]];
+    [mainScrollview addSubview:dateLabel];
+    
+    return dateLabel;
+}
+
+#pragma mark - Title View
+
+-(UIView *)createTitleView {
+    // Create title label
+    CommonDynamicCellModel *titleDetails = [[CommonHelperClass sharedConstants] calculateLabelMaxSize:postClassifiedItem.title with:[UIFont systemFontOfSize:12.0f] with:300];
+    
+    UIView *titleView = [[UIView alloc] initWithFrame:CGRectMake(10, 10, 300, (titleDetails.maxSize.height + 10 < 60?60:titleDetails.maxSize.height + 10))];
+    //[titleView setBackgroundColor:[UIColor whiteColor]];
+    titleView.layer.borderColor = kViewBorderColor;
+    titleView.layer.borderWidth = kViewBorderWidth;
+    titleView.layer.cornerRadius = kSubViewCornerRadius;
+    titleView.layer.masksToBounds = YES;
+    [mainScrollview addSubview:titleView];
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 5, titleView.frame.size.width - 10, titleDetails.maxSize.height)];
+    titleLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    titleLabel.numberOfLines = 0;
+    [titleLabel setFont:[UIFont systemFontOfSize:12.0f]];
+    [titleLabel setTextColor:[UIColor sidraFlatDarkGrayColor]];
+    [titleLabel setText:titleDetails.maxTitle];
+    [titleLabel setBackgroundColor:[UIColor clearColor]];
+    [titleView addSubview:titleLabel];
+    
+    return titleView;
+}
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+#pragma mark - Footer View delegate
+-(void)createFooterview{
+    CGFloat height = 50;
+    footerview = [[FooterView alloc] initWithFrame: CGRectMake(0, SCREEN_SIZE.height - (64 + height), SCREEN_SIZE.width, height) withIdentity:1 withParent:self];
+    [self.view addSubview:footerview];
+    
+}
+
+-(void)leftButtonAction{
+    [popUpView removeFromSuperview];
+    [super goBack];
+}
+
+-(void)rightButtonMethod{
+
+//    dispatch_async(dispatch_get_main_queue(), ^{
+//        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Posting Notice" message:@"Do you ascertain that your post conforms to the Sidra community standards" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"OK", nil];
+//        alert.tag = 100;
+//        [alert show];
+//    });
+
+    [popUpView removeFromSuperview];
+    if (postClassifiedItem.isDraft == 0) {
+        [self callAddClassifiedPostApi:@"All classifieds will be automatically removed 4 weeks from the date of posting" unsuccessfullMessage:@"Please try again"];
+    }
+    else{
+        postClassifiedItem.isDraft = 0;
+        [self callUpdateClassifiedPostApi];
+    }
+    
+    
+}
+
+-(void)callUpdateClassifiedPostApi{
+
+    NSMutableArray *tempArray = [[NSMutableArray alloc] init];
+    if (postClassifiedItem.photosArray.count > 0) {
+        for (NSString *photosUrl in postClassifiedItem.photosArray) {
+            NSString *photosName = [photosUrl stringByReplacingOccurrencesOfString:@"uploads/classified/" withString:@""];
+            [tempArray addObject:photosName];
+        }
+    }
+    
+    [[ServerManager sharedManager] updateClassifiedWithCatID:postClassifiedItem.cat_id classifiedID:postClassifiedItem.item_id title:postClassifiedItem.title description:postClassifiedItem.description photo:tempArray isDraft:[NSString stringWithFormat:@"%i",postClassifiedItem.isDraft] completion:^(BOOL success){
+        
+            if (success) {
+            
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"SUCCESS" message:@"Your classified has been updated. All items will be automatically removed 4 weeks from the postion date" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                    alert.tag = 101;
+                    [alert show];
+                });
+            
+            }else{
+            
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[[UIAlertView alloc] initWithTitle:@"UNSUCCESS" message:@"Classified Not Updated, Please try again" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil, nil] show];
+                });
+            
+            }
+        
+    }];
+
+}
+
+
+-(void)callAddClassifiedPostApi:(NSString *)successfullMessage unsuccessfullMessage:(NSString *)unsuccessfullMessage{
+
+    NSMutableArray *tempArray = [[NSMutableArray alloc] init];
+    if (postClassifiedItem.photosArray.count > 0) {
+        for (NSString *photosUrl in postClassifiedItem.photosArray) {
+            NSString *photosName = [photosUrl stringByReplacingOccurrencesOfString:@"uploads/classified/" withString:@""];
+            [tempArray addObject:photosName];
+        }
+    }
+    
+    //@[@"140496404010397981_662617793826868_56480279239687492_n.jpg",@"1404964064images (3).jpeg",@"1404964083images (1).jpeg"]
+    [[ServerManager sharedManager] addClassifiedWithCatID:postClassifiedItem.cat_id
+                                                    title:postClassifiedItem.title
+                                              description:postClassifiedItem.description
+                                                    photo:tempArray
+                                                  isDraft:[NSString stringWithFormat:@"%i",postClassifiedItem.isDraft]
+                                               completion:^(BOOL success) {
+                                                   if (success) {
+
+                                                       dispatch_async(dispatch_get_main_queue(), ^{
+                                                           
+                                                           UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Classified Posted" message:successfullMessage delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+                                                           alert.tag = 101;
+                                                           [alert show];
+                                                           
+                                                       });
+                                                       
+                                                   }else{
+
+                                                       dispatch_async(dispatch_get_main_queue(), ^{
+                                                           [[[UIAlertView alloc] initWithTitle:@"Classified Not Posted" message:unsuccessfullMessage delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil, nil] show];
+                                                       });
+                                                       
+                                                   }
+                                                   //
+                                               }];
+}
+
+#pragma mark - UIalertview Delegate
+-(void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex{
+    if (alertView.tag == 100) {
+        if (buttonIndex == 1) {
+//            postClassifiedItem.isDraft = postClassifiedItem.isDraft == 0 ? 1 : 0;
+            [popUpView removeFromSuperview];
+            if (postClassifiedItem.isDraft == 0) {
+                [self callAddClassifiedPostApi:@"All classifieds will be automatically removed 4 weeks from the date of posting" unsuccessfullMessage:@"Please try again"];
+            }
+            else{
+                postClassifiedItem.isDraft = 0;
+                [self callUpdateClassifiedPostApi];
+            }
+        }
+    }
+    if (alertView.tag == 101){
+        if (buttonIndex == 0) {
+            [popUpView removeFromSuperview];
+            [self goClassifiedMainMenu];
+        }
+    }
+}
+
+
+
+-(void)goClassifiedMainMenu{
+    NSInteger noOfViewControllers = [self.navigationController.viewControllers count];
+    [self.navigationController
+     popToViewController:[self.navigationController.viewControllers objectAtIndex:(noOfViewControllers-3)] animated:YES];
+}
+#pragma mark - PopupView delegate
+
+-(void)createLeavePopupview{
+    popUpView = [[PopupView alloc] initWithFrame:CGRectZero with:self];
+}
+
+-(void)popupDiscardAction{
+    [popUpView removeFromSuperview];
+    [self goClassifiedMainMenu];
+}
+
+-(void)popupSaveAction{
+//    postClassifiedItem.isDraft = 1;
+    if (postClassifiedItem.isDraft == 0) {
+        postClassifiedItem.isDraft = 1;
+        [self callAddClassifiedPostApi:@"Saved as Draft" unsuccessfullMessage:@"failed to save as draft"];
+    }
+    else{
+        [self callUpdateClassifiedPostApi];
+    }
+    
+}
+#pragma mark - parent view controller delegate
+- (void)goBack{
+    [popUpView openPopupAnimation];
+}
+@end

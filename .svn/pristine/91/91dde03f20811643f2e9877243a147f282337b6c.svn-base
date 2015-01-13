@@ -1,0 +1,274 @@
+//
+//  HumanResourcesViewController.m
+//  Pulse
+//
+//  Created by xibic on 6/11/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "HumanResourcesViewController.h"
+#import "HRL1Item.h"
+#import "StaffTableViewCell.h"
+#import "HRVContentDetails.h"
+#import "SKSTableViewCell.h"
+#import "HRL2Item.h"
+#import "PressDetailsViewController.h"
+
+#define CELL_HEIGHT 50
+
+@interface HumanResourcesViewController ()
+
+@end
+
+@implementation HumanResourcesViewController {
+
+    NSMutableArray *HRV_catList;
+    UITableView *HRVTableView;    // TableView
+    
+    NSMutableArray *HRDetailsList;
+   
+}
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        self.title = @"Human Resources";
+    }
+    return self;
+}
+
+- (void)viewDidLoad{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    
+
+    HRV_catList = [[NSMutableArray alloc] init];
+     HRDetailsList = [[NSMutableArray alloc] init];
+    
+/*    for (int i=0; i<3; i++) {
+        
+        HRL1Item *item = [[HRL1Item alloc] init];
+        item.catName = [NSString stringWithFormat:@"CatName %d",i];
+        [HRV_catList addObject:item];
+        item = nil;
+    }
+*/    
+    // ***** Table View
+    
+    HRVTableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, [[UIScreen mainScreen] bounds].size.height-self.navigationController.navigationBar.frame.size.height-20)];
+    
+    [HRVTableView setBackgroundColor:[UIColor clearColor]];
+    [HRVTableView setDelegate:self];
+    [HRVTableView setDataSource:self];
+    [HRVTableView setScrollEnabled:YES];
+    [HRVTableView setSeparatorInset:UIEdgeInsetsZero];
+    // This will remove extra separators from tableview
+    HRVTableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    [self.view addSubview:HRVTableView];
+    
+
+    [[ServerManager sharedManager] fetchHRCategory:@"1" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        if (success) {
+            XLog(@"%@",resultDataArray);
+            HRV_catList = resultDataArray;
+         
+            for (int i=0; i<resultDataArray.count; i++) {
+                HRL1Item *item=(HRL1Item*)[resultDataArray objectAtIndex:i];
+                if([item.catName isEqualToString:@"Article"])
+                    [self getArticleListFromServer:item];
+            }
+            
+            //[HRVTableView reloadData];
+        }
+    }];
+    
+}
+
+-(void)getArticleListFromServer:(HRL1Item*)item{
+    
+    NSString *hRCatIdString = item.itemID;
+    
+[[ServerManager sharedManager] fetchHRDetails:@"" hrType:hRCatIdString scrollDirection:@"" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+    if (success) {
+        XLog(@"%@",resultDataArray);
+        HRDetailsList  =resultDataArray;
+        
+       [HRVTableView reloadData];
+        
+    }
+}];
+}
+
+
+#pragma mark - Table view data source
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    // Return the number of sections.
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    // Return the number of rows in the section.
+    
+    return [HRV_catList count]-1+HRDetailsList.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+     if(indexPath.row<HRV_catList.count-1){
+    static NSString *cellIdentifier = @"HRVTableCell";
+    
+    StaffTableViewCell *cell = (StaffTableViewCell *)[tableView dequeueReusableCellWithIdentifier:cellIdentifier];
+    
+    // If there is no cell to reuse, create a new one
+    if(cell == nil)
+    {
+        //cell = [[StaffTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
+        cell = [[StaffTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier] ;
+        cell.nameLabel.frame = CGRectMake(15, 15, 250, 20);
+        cell.grayArrow.frame =CGRectMake(self.view.frame.size.width - 22, 20, 8, 5);
+    }
+    
+         if(HRV_catList.count>=1){
+    HRL1Item *item = (HRL1Item *) [HRV_catList objectAtIndex:indexPath.row+1];
+    cell.nameLabel.text = item.catName;
+    cell.nameLabel.textColor = [UIColor darkGrayColor];
+         }
+    
+
+   
+    return cell;
+     }
+     else{
+         
+         static NSString *CellIdentifier = @"SKSTableViewCell";
+         
+         SKSTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+         
+         if (!cell)
+             cell = [[SKSTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+         
+         HRL2Item *item = (HRL2Item *)[HRDetailsList objectAtIndex:indexPath.row-(HRV_catList.count-1)];
+         
+         cell.textLabel.text = item.question;
+         cell.textLabel.lineBreakMode = NSLineBreakByWordWrapping;
+         cell.textLabel.numberOfLines = 0;
+         cell.textLabel.textColor = [UIColor darkGrayColor];
+         cell.textLabel.font =  [UIFont systemFontOfSize:15];
+         
+         cell.expandable = YES;
+         
+
+         
+             return cell;
+     }
+    
+}
+
+
+#pragma mark - Table View delegate
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    [HRVTableView deselectRowAtIndexPath:[tableView indexPathForSelectedRow] animated:YES];
+    
+    //Faqs
+    if(indexPath.row<HRV_catList.count-1){
+    HRL1Item *item = (HRL1Item *)[HRV_catList objectAtIndex:indexPath.row+1];
+    
+    HRVContentDetails *detailsView = [[HRVContentDetails alloc] initWithNibName:@"HRVContentDetails" bundle:nil];
+    detailsView.hrl1Item = item;
+    detailsView.shouldShowRightMenuButton = YES;
+    [self.navigationController pushViewController:detailsView animated:YES];
+     }
+    //article
+    else{
+        
+        //PressReleaseItem *item = (PressReleaseItem *)[pressReleaseDataArray objectAtIndex:indexPath.row];
+        HRL2Item *item = (HRL2Item *)[HRDetailsList objectAtIndex:indexPath.row-(HRV_catList.count-1)];
+        
+        PressDetailsViewController *_pressDetailsView = [[PressDetailsViewController alloc] initWithNibName:@"PressDetailsViewController" bundle:nil];
+        _pressDetailsView.shouldShowRightMenuButton = YES ;
+        _pressDetailsView.isHRArtical = YES;
+        _pressDetailsView.item = item;
+        [self.navigationController pushViewController:_pressDetailsView animated:YES];
+    
+    
+    }
+    
+}
+
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    return  CELL_HEIGHT;
+}
+
+#pragma mark - Pull Refresh
+- (void)pullDownToRefresh{
+    HRL2Item *item = (HRL2Item *)[HRDetailsList objectAtIndex:0];
+    lastElementID = [NSString stringWithFormat:@"%@",item.itemID];
+    
+    HRL1Item *item2 = (HRL1Item *)[HRV_catList objectAtIndex:0];
+    
+    
+    NSString *hRCatIdString = item2.itemID;
+    
+    [[ServerManager sharedManager] fetchHRDetails:[NSString stringWithFormat:@"%@",lastElementID] hrType:hRCatIdString scrollDirection:@"0" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        isLoading = NO;
+        [loadingView dismisssView];
+        if (success) {
+            XLog(@"%@",resultDataArray);
+            HRDetailsList  = resultDataArray;
+            
+            [HRVTableView reloadData];
+            
+        }else{
+        }
+    }];
+    
+}
+- (void)pullUpToRefresh{
+    //PressReleaseItem *item = (PressReleaseItem *)[pressReleaseDataArray objectAtIndex:pressReleaseDataArray.count-1];
+    HRL2Item *item = (HRL2Item *)[HRDetailsList objectAtIndex:HRDetailsList.count-1];
+        lastElementID = [NSString stringWithFormat:@"%@",item.itemID];
+
+    
+     HRL1Item *item2 = (HRL1Item *)[HRV_catList objectAtIndex:0];
+    
+    NSString *hRCatIdString = item2.itemID;
+
+    
+    [[ServerManager sharedManager] fetchHRDetails:[NSString stringWithFormat:@"%@",lastElementID] hrType:hRCatIdString scrollDirection:@"1" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        isLoading = NO;
+        [loadingView dismisssView];
+        if (success) {
+            [HRDetailsList addObjectsFromArray:resultDataArray];
+            [HRVTableView reloadData];
+            
+        }else{
+        }
+    }];
+}
+
+-(void)loadingPullUpView{
+    [super loadingPullUpView];
+    CGRect frame = CGRectMake(0, SCREEN_SIZE.height-40.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+}
+
+-(void) loadingPullDownView{
+    [super loadingPullDownView];
+    CGRect frame = CGRectMake(0, 65.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+    
+}
+
+
+@end

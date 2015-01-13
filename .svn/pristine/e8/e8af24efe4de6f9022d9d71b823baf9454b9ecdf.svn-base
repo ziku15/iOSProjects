@@ -1,0 +1,246 @@
+//
+//  ClassifiedsViewController.m
+//  Pulse
+//
+//  Created by xibic on 6/11/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "ClassifiedsViewController.h"
+
+@interface ClassifiedsViewController ()<UIScrollViewDelegate>{
+    ClassifiedTabbarView *tabView;
+    AllClassifiedsView *allClassifiedView;
+    ClassifiedDetailsViewController *classifiedDetailsViewController;
+    NewPostClassifiedViewController *newPostClassifiedViewController;
+    UILabel *noPostLabel;
+}
+
+@end
+
+@implementation ClassifiedsViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        self.title = @"";
+        //[self categorySelectedText:@"All Categories"];
+        [self setNavigationCustomTitleView:@"Classifieds" with:@"Listing All Classifieds"];
+        classifiedDetailsViewController = nil;
+        newPostClassifiedViewController = nil;
+    }
+    return self;
+}
+
+-(void)commonViewResizeMethod{
+    
+    if (IPHONE_5) {
+        [self.classifiedScrollview setFrame:CGRectMake(self.classifiedScrollview.frame.origin.x, self.classifiedScrollview.frame.origin.y, self.classifiedScrollview.frame.size.width, self.view.frame.size.height - (64 + 60))];
+    }
+    else{
+        [self.classifiedScrollview setFrame:CGRectMake(self.classifiedScrollview.frame.origin.x, self.classifiedScrollview.frame.origin.y, self.classifiedScrollview.frame.size.width, 356)];
+    }
+    
+    
+}
+
+- (void)viewDidLoad{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    SCROLL_CONSIDER_HEIGHT = 00;
+    menuSignature = classified_index;
+    
+    [self commonViewResizeMethod];
+    
+    noPostLabel = [[UILabel alloc] initWithFrame:CGRectMake(00, self.view.bounds.size.height/4, self.view.bounds.size.width, 200)];
+    [noPostLabel setText:@"No post available yet"];
+    [noPostLabel setFont:[UIFont boldSystemFontOfSize:23.5f]];
+    [noPostLabel setTextAlignment:NSTextAlignmentCenter];
+    noPostLabel.alpha = 0.0f;
+    [self.view addSubview:noPostLabel];
+    
+    
+    tabView = [[ClassifiedTabbarView alloc] initWithFrame:CGRectMake(0, 0, 320, 50) with:self];
+    [tabView setBackgroundColor:[UIColor whiteColor]];
+    
+    [self.view addSubview:tabView];
+    
+
+    allClassifiedView = [[AllClassifiedsView alloc] initWithFrame:CGRectMake(0, tabView.frame.origin.y + tabView.frame.size.height, tabView.frame.size.width, self.classifiedScrollview.frame.size.height - tabView.frame.size.height)];
+    allClassifiedView.tag = 1000;
+    allClassifiedView.clipsToBounds = YES;
+    allClassifiedView.isBookmarkedTabSelected = false;
+    [allClassifiedView setDelegate:self];
+    [allClassifiedView setBackgroundColor:[UIColor clearColor]];
+    [self.classifiedScrollview addSubview:allClassifiedView];
+    
+    [self.classifiedScrollview setContentSize:CGSizeMake(allClassifiedView.frame.size.width, allClassifiedView.frame.origin.y+allClassifiedView.frame.size.height)];
+    
+    dispatch_queue_t backgroundQueue = dispatch_queue_create("Background Queue", NULL);
+    dispatch_async(backgroundQueue, ^{
+        //Clear bubble notification = 2 == Classified type
+        [[ServerManager sharedManager] updateBubbleNotificationStatus:@"2" completion:^(BOOL success) {
+            if (success) {
+            }
+        }];
+    });
+
+}
+
+
+- (IBAction)createPostAction:(id)sender {
+    newPostClassifiedViewController = nil;
+    [loadingView dismisssView];
+    ClassifiedItem *item = [[ClassifiedItem alloc] init];
+    item.title = @"";
+    item.catID = -1;
+    item.a_description = @"";
+    item.photos = [[NSArray alloc] init];
+    newPostClassifiedViewController = [[NewPostClassifiedViewController alloc] init:item];
+    newPostClassifiedViewController.shouldShowRightMenuButton = YES;
+    [self.navigationController pushViewController:newPostClassifiedViewController animated:YES];
+}
+
+#pragma mark - all classified view delegate
+-(void)dynamicallyChangeViewSize:(id)reference{
+    UIView *view = (UIView *)reference;
+    if(allClassifiedView.dataArray.count<=0){
+        self.classifiedScrollview.scrollEnabled = NO;
+        noPostLabel.alpha = 1.0f;
+    }else{
+        [self.classifiedScrollview setContentSize:CGSizeMake(view.frame.size.width, view.frame.origin.y+view.frame.size.height+10)];
+        self.classifiedScrollview.scrollEnabled = YES;
+        noPostLabel.alpha = 0.0f;
+    }
+    
+}
+
+-(void)allClassifiedCellSelection:(ClassifiedItem *)item index:(NSInteger)selIndex{
+
+    classifiedDetailsViewController = nil;
+    newPostClassifiedViewController = nil;
+    
+    if (item.isDraft == 0) {
+        //Active
+        classifiedDetailsViewController = [[ClassifiedDetailsViewController alloc] init:item selectionIndex:selIndex];
+        classifiedDetailsViewController.shouldShowRightMenuButton = YES;
+        [self.navigationController pushViewController:classifiedDetailsViewController animated:YES];
+    }
+    else{
+        //Draft
+        
+
+        
+        newPostClassifiedViewController = [[NewPostClassifiedViewController alloc] init:item];
+        newPostClassifiedViewController.shouldShowRightMenuButton = YES;
+        //newPostClassifiedViewController.classifiedItem=item;
+        [self.navigationController pushViewController:newPostClassifiedViewController animated:YES];
+    }
+ 
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    
+    if (classifiedDetailsViewController != nil) {
+        if (classifiedDetailsViewController.isDeleteClick) {
+            [allClassifiedView.dataArray removeObjectAtIndex:classifiedDetailsViewController.selectedIndex];
+            [allClassifiedView refreshView];
+        }
+        classifiedDetailsViewController = nil;
+    }
+    
+    if (newPostClassifiedViewController != nil) {
+        [allClassifiedView populateClassifiedFeed:@"" direction:@""];
+        newPostClassifiedViewController = nil;
+    }
+}
+
+
+
+#pragma mark - Events tabbar delegate
+-(void)tabbedClassifiedAction:(int)button_tag{
+    //Call api by tabbar item click
+    if (button_tag == 0) {
+        //All CLassified
+        //[self showDesireView:1000 with:1001];
+        //[allClassifiedView populateClassifiedFeed];
+        NSString *titleText = @"Classifieds";
+        NSString *subTitleText = @"Listing All Classifieds";
+        allClassifiedView.isBookmarkedTabSelected = false;
+        [super setNavigationCustomTitleView:titleText with:subTitleText];
+    }
+    else{
+        NSString *titleText = @"Classifieds";
+        NSString *subTitleText = @"Listing Posted by Me";
+        allClassifiedView.isBookmarkedTabSelected = true;
+        [super setNavigationCustomTitleView:titleText with:subTitleText];
+        //Posted By Me
+        //[allClassifiedView populateClassifiedFeed];
+    }
+    
+    [allClassifiedView createFeedView];
+    [allClassifiedView populateClassifiedFeed:@"" direction:@""];
+    
+}
+
+#pragma mark - Catefory select event 
+-(void)categorySelectedText:(NSString *)categoryName{
+    
+    NSString *subTitle;
+    if ([categoryName isEqualToString:@"All Categories"])
+        subTitle = @"Listing All Classifieds";
+    else
+        subTitle = [NSString stringWithFormat:@"Listing Classifieds under <%@>",categoryName];
+    
+    [self setNavigationCustomTitleView:@"Classifieds" with:subTitle];
+    
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+//    tabView.userInteractionEnabled = NO;
+    [super scrollViewDidScroll:scrollView];
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
+    [super scrollViewDidEndDecelerating:scrollView];
+}
+
+
+#pragma mark - Pull Refresh
+- (void)pullDownToRefresh{
+    [allClassifiedView populateClassifiedFeed:@"" direction:@"0"];
+}
+- (void)pullUpToRefresh{
+   [allClassifiedView populateClassifiedFeed:@"" direction:@"1"];
+}
+
+
+-(void)loadingPullUpView{
+    //tabView.userInteractionEnabled = NO;
+    [super loadingPullUpView];
+    CGRect frame = CGRectMake(0, SCREEN_SIZE.height-99.5f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+}
+
+-(void) loadingPullDownView{
+    
+    [super loadingPullDownView];
+    CGRect frame = CGRectMake(0, 65.0f+50.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+    
+}
+
+- (void)updateDataLoading:(BOOL)loading{
+    isLoading = loading;
+    if (loadingView) {
+        tabView.userInteractionEnabled = YES;
+        //[loadingView removeFromSuperview];
+        [loadingView dismisssView];
+    }
+}
+
+@end

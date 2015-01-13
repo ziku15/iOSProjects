@@ -1,0 +1,161 @@
+//
+//  StaffSearchViewController.m
+//  Pulse
+//
+//  Created by xibic on 7/7/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "StaffSearchViewController.h"
+#import "StaffTableView.h"
+#import "StaffItem.h"
+
+
+@interface StaffSearchViewController ()
+
+@end
+
+@implementation StaffSearchViewController
+
+
+@synthesize staffArray,searchKey;
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    
+   // self.title = [NSString stringWithFormat:@"Search results for \"%@\"",self.searchKey];
+    
+    self.title = [NSString stringWithFormat:@"Staff Directory"];
+    
+     [self addStaffSearchView];
+   // [self searchResultRefresh];
+    
+    [directorySearchBar updatePlaceHolderText:[NSString stringWithFormat:@"Search staff directory"]];
+    [directorySearchBar triggerSearchBar:self.searchKey];
+
+    
+    
+    noResultsLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, self.view.frame.size.height/3.0f, SCREEN_SIZE.width -10.0f, 50.0f)];
+    noResultsLabel.font = [UIFont systemFontOfSize:15.0f];
+    noResultsLabel.textColor = [UIColor sidraFlatDarkGrayColor];
+    noResultsLabel.textAlignment = NSTextAlignmentCenter;
+    noResultsLabel.numberOfLines = 2;
+    noResultsLabel.text = [NSString stringWithFormat:@"No contacts matching the keyword were found."];
+    [self.view addSubview:noResultsLabel];
+    
+    
+        resultHeaderView = [[UILabel alloc] initWithFrame:CGRectMake(0, directorySearchBar.frame.origin.y+directorySearchBar.frame.size.height, self.view.frame.size.width, 50)];
+    
+    
+    
+
+    
+    if ([staffArray count]!=0 || staffArray != NULL) {
+        
+        [self addStaffSearchResultHeaderView:self.searchKey arraycount:(int)staffArray.count];
+        
+        
+         staffTable = [[StaffTableView alloc] initWithFrame:CGRectMake(0, resultHeaderView.frame.origin.y+resultHeaderView.frame.size.height+3, SCREEN_SIZE.width, SCREEN_SIZE.height - (resultHeaderView.frame.origin.y+resultHeaderView.frame.size.height+3)) withArray:staffArray];
+        [self.view addSubview:staffTable];
+        
+        noResultsLabel.hidden=YES;
+        
+        
+    }else{
+        
+        noResultsLabel.hidden=NO;
+
+    }
+}
+
+#pragma mark - Staff searchResultRefresh
+-(void)searchResultRefresh{
+    
+   
+  
+}
+
+#pragma mark - Staff result header
+- (void)addStaffSearchResultHeaderView:(NSString*)labelText arraycount:(int)count{
+    
+    resultHeaderView.backgroundColor=[UIColor whiteColor];
+    resultHeaderView.text=[NSString stringWithFormat:@"%lu  result matching\n \"%@\"",(unsigned long)count,labelText];
+    resultHeaderView.textAlignment=NSTextAlignmentCenter;
+    resultHeaderView.font=[UIFont boldSystemFontOfSize:18.0f];
+    resultHeaderView.numberOfLines=2;
+ 
+    [self.view addSubview:resultHeaderView];
+}
+
+
+
+/* ****** SEARCH - START ****** */
+
+#pragma mark - Staff Search
+- (void)addStaffSearchView{
+    directorySearchBar = [[XIBSearchBar alloc] initWithFrame:CGRectMake(10, 0, 300, 50) withPlaceholderText:@"Search staff directory"];
+    directorySearchBar.delegate = self;
+    [self.view addSubview:directorySearchBar];
+}
+#pragma mark - XIBSearchBarDelegate
+- (void)searchResult:(NSArray *)resultArray forText:(NSString *)searchText{
+    XLog(@"Search result for text:%@ - %@",searchText,resultArray);
+    
+    NSCharacterSet *charSet = [NSCharacterSet whitespaceCharacterSet];
+    NSString *trimmedString = [searchText stringByTrimmingCharactersInSet:charSet];
+    if ([trimmedString isEqualToString:@""]) {
+        // it's empty or contains only white spaces
+    }
+    else{
+        
+        
+        [self searchResultRefresh];
+        [staffTable refreshArrayData:[resultArray mutableCopy]];
+        
+        [directorySearchBar updatePlaceHolderText:[NSString stringWithFormat:@"Search staff directory"]];
+        [directorySearchBar triggerSearchBar:searchText];
+        
+        if(resultArray.count>0){
+           [self addStaffSearchResultHeaderView:searchText arraycount:(int)resultArray.count];
+          resultHeaderView.hidden=NO;
+             noResultsLabel.hidden=YES;
+        }
+        else{
+            resultHeaderView.hidden=YES;
+             noResultsLabel.hidden=NO;
+        }
+
+        
+        
+        /*StaffSearchViewController *viewController = [[StaffSearchViewController alloc] initWithNibName:@"StaffSearchViewController" bundle:nil];
+        viewController.staffArray = resultArray;
+        viewController.searchKey = searchText;
+        [self.navigationController pushViewController:viewController animated:YES];
+        viewController = nil;*/
+    }
+    
+}
+
+/* ****** SEARCH - END ****** */
+
+
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end

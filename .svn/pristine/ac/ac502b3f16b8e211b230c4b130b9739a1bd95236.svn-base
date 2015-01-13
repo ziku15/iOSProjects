@@ -1,0 +1,23 @@
+//
+//  XIBPhotoScrollView.h
+//  Pulse
+//
+//  Created by xibic on 6/26/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol XIBPhotoScrollViewDelegate <NSObject>
+
+@optional
+- (void)imageTap:(int)index;
+
+@end
+
+@interface XIBPhotoScrollView : UIView
+
+@property(nonatomic, retain) id<XIBPhotoScrollViewDelegate>delegate;
+
+- (id)initWithFrame:(CGRect)frame withPhotos:(NSArray *)photoArray;
+@end

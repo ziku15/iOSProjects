@@ -1,0 +1,434 @@
+//
+//  DeptViewController.m
+//  Pulse
+//
+//  Created by Atomix on 6/25/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "DeptViewController.h"
+#import "XIBSearchBar.h"
+#import "StaffItem.h"
+#import "StaffSearchView.h"
+#import "StaffTableView.h"
+
+@interface DeptViewController () <StaffSearchViewDelegate, StaffTableViewDelegate>{
+    BOOL SHOULD_GO_BACK_TO_MENU;
+}
+
+@end
+
+@implementation DeptViewController {
+    
+    UISegmentedControl *tabBarControl;
+    StaffSearchView *staffSearchView;
+    NSMutableArray *dataArray;  // hold Array data for Browse
+    StaffTableView *staffTableForBrowse;
+    StaffTableView *staffTableForSaveContact;
+    
+    
+    NSMutableArray *savedContactDataArray; // New added for Saved Contact List
+    NSMutableArray *allSavedContact;
+}
+
+@synthesize deptItem;
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+
+    }
+    return self;
+}
+
+- (void)goBack{
+    if (SHOULD_GO_BACK_TO_MENU) [self.navigationController popViewControllerAnimated:YES];
+    else {
+        SHOULD_GO_BACK_TO_MENU = TRUE;
+        [staffSearchView cancelButtonAction];
+    }
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    
+    SCROLL_CONSIDER_HEIGHT = 00;
+    menuSignature = staffDirectory_index;
+    
+    SHOULD_GO_BACK_TO_MENU = TRUE;
+    // Title
+    self.title  = [NSString stringWithFormat:@"%@ Dept.", self.deptItem.deptName];
+    
+    //+++++++ UI design +++++++++++
+    
+    [self TabBarDesignSection];  // Tab bar design Section
+    
+    
+    
+    // Staff Table View For Browse
+    staffTableForBrowse = [[StaffTableView alloc] initWithFrame:CGRectMake(0, 65, SCREEN_SIZE.width, SCREEN_SIZE.height - 180) withArray:nil];
+    staffTableForBrowse.delegate = self;
+    [self.view addSubview:staffTableForBrowse];
+    
+    // Staff Table View For Save Conatact
+    staffTableForSaveContact = [[StaffTableView alloc] initWithFrame:CGRectMake(0, 65, SCREEN_SIZE.width, SCREEN_SIZE.height - 180) withArray:nil];
+    staffTableForSaveContact.delegate = self;
+    [self.view addSubview:staffTableForSaveContact];
+    staffTableForSaveContact.hidden = YES;
+    
+    // Data Load for Browse
+    [self initializeDataArray];
+    
+    [self addBottomSearchBar];   // bottom search bar section
+}
+
+#pragma mark - UI Design Section
+
+-(void) TabBarDesignSection {
+    
+    // +++++++ white background View +++++++++
+    
+    UIView *whiteBg = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 56)];
+    whiteBg.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:whiteBg];
+    
+    UIView *lightGrayEffect = [[UIView alloc] initWithFrame:CGRectMake(0, whiteBg.frame.size.height-1, self.view.frame.size.width, 1)];
+    lightGrayEffect.backgroundColor = [UIColor lightGrayColor];
+    [whiteBg addSubview:lightGrayEffect];
+    
+    //+++++++ Tab bar +++++++++
+    
+    tabBarControl = [[UISegmentedControl alloc] initWithItems:[NSArray arrayWithObjects:@"Browse", @"Saved Contacts", nil]];
+    tabBarControl.frame = CGRectMake(10, 10, 300, 35);
+    tabBarControl.segmentedControlStyle = UISegmentedControlStyleBar;
+    tabBarControl.selectedSegmentIndex = 0;
+    tabBarControl.tintColor = [UIColor sidraFlatTurquoiseColor];
+    [tabBarControl addTarget:self action:@selector(tabBarAction:) forControlEvents: UIControlEventValueChanged];
+    [[tabBarControl.subviews objectAtIndex:1] setTintColor:[UIColor clearColor]];
+    [self.view addSubview:tabBarControl];
+    
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [UIFont systemFontOfSize:14], UITextAttributeFont,
+                                [UIColor blackColor], UITextAttributeTextColor,
+                                nil];
+    [tabBarControl setTitleTextAttributes:attributes forState:UIControlStateNormal];
+    NSDictionary *highlightedAttributes = [NSDictionary dictionaryWithObject:[UIColor whiteColor] forKey:UITextAttributeTextColor];
+    [tabBarControl setTitleTextAttributes:highlightedAttributes forState:UIControlStateHighlighted];
+    
+    //--- Gray Border effect in tab bar
+    
+    CALayer *borderLayer = [CALayer layer];
+    CGRect borderFrame = CGRectMake(0, 0, (tabBarControl.frame.size.width), (tabBarControl.frame.size.height));
+    [borderLayer setBackgroundColor:[[UIColor clearColor] CGColor]];
+    [borderLayer setFrame:borderFrame];
+    [borderLayer setCornerRadius:kViewCornerRadius];
+    [borderLayer setBorderWidth:kViewBorderWidth];
+    [borderLayer setBorderColor:kViewBorderColor];
+    [tabBarControl.layer addSublayer:borderLayer];
+    
+    
+}
+
+//+++++ Tab bar Action ++++
+
+- (void)tabBarAction:(UISegmentedControl *)segment {
+    
+    XLog(@"tab Bar selected : %ld", (long)segment.selectedSegmentIndex);
+    
+    // +++++++ Tab Bar border color +++++++++
+    
+    for (int i=0; i<[tabBarControl.subviews count]; i++)
+    {
+        if ([[tabBarControl.subviews objectAtIndex:i]isSelected] )
+        {
+            [[tabBarControl.subviews objectAtIndex:i] setTintColor:[UIColor sidraFlatTurquoiseColor]];
+            
+        }
+        else
+        {
+            [[tabBarControl.subviews objectAtIndex:i] setTintColor:[UIColor clearColor]];
+            
+        }
+    }
+    
+    // -- Action
+    
+    if (segment.selectedSegmentIndex==0) {
+        
+        XLog(@"Browse");
+        staffTableForSaveContact.isSavedContactViewMode = FALSE;
+  
+        [staffSearchView updatePlaceHolderText:@"Search within this department"];
+        staffSearchView.searchDept = [NSString stringWithFormat:@"%@",deptItem.itemID];
+        staffSearchView.savedContact = @"NO";
+        
+        // Table View visible Section
+        staffTableForBrowse.hidden = NO;
+        staffTableForSaveContact.hidden = YES;
+
+        // reload updated Data
+        [staffTableForBrowse refreshArrayData:dataArray];
+    }
+    
+    else if (segment.selectedSegmentIndex==1) {
+        
+        XLog(@"saved contact");
+        staffTableForSaveContact.isSavedContactViewMode = TRUE;
+        
+        [staffSearchView updatePlaceHolderText:@"Search within saved contact"];
+         staffSearchView.searchDept = [NSString stringWithFormat:@"%@",deptItem.itemID];
+        staffSearchView.savedContact = @"YES";
+        
+        // Table View visible Section
+        staffTableForBrowse.hidden = YES;
+        staffTableForSaveContact.hidden = NO;
+        
+        // data Section
+        //[self saveContactDataArray];  // off it for offline issue
+        
+        //[self specificDepartmentSavedContact]; // replace it with saveContactDataArray method
+        [self retriveAllSavedContactFromServer];
+    }
+    
+}
+
+
+#pragma -fetch All Save Contact From Server
+
+// fetch All save contact from Server
+-(void)retriveAllSavedContactFromServer {
+    
+    // API 6
+    
+    NSString *_deptID = @"0";
+    allSavedContact = [[NSMutableArray alloc] init];
+    
+    [[ServerManager sharedManager] fetchStaffDirectoryStaffs:@"" deptID:_deptID scrollDirection:@"" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        if (success) {
+            XLog(@"Staff: %@",resultDataArray);
+            allSavedContact = resultDataArray;
+            [staffTableForSaveContact refreshArrayData:allSavedContact];
+            if (!resultDataArray.count>0) {
+//                CGRect frame = CGRectMake([UIScreen mainScreen].bounds.size.width/10.0,
+//                                          [UIScreen mainScreen].bounds.size.height/4.0 , 220, 105);
+//                NSString *msg = @"List currently empty. You can save contacts by tapping the star next to their names";
+//                AlertPopView *alertMsg = [[AlertPopView alloc] initWithFrame:frame alertMsg:msg withDelay:1.5];
+//                [[UIApplication sharedApplication].keyWindow addSubview:alertMsg];
+//                alertMsg = nil;
+            }
+        }else{
+            allSavedContact = resultDataArray;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [staffTableForSaveContact refreshArrayData:allSavedContact];
+                
+            });
+//            CGRect frame = CGRectMake([UIScreen mainScreen].bounds.size.width/10.0,
+//                                      [UIScreen mainScreen].bounds.size.height/4.0 , 220, 105);
+//            NSString *msg = @"List currently empty. You can save contacts by tapping the star next to their names";
+//            AlertPopView *alertMsg = [[AlertPopView alloc] initWithFrame:frame alertMsg:msg withDelay:1.5];
+//            [[UIApplication sharedApplication].keyWindow addSubview:alertMsg];
+//            alertMsg = nil;
+        }
+    }];
+    
+}
+
+
+
+
+
+
+#pragma mark - UI Data Section
+
+// Browse Data
+-(void) initializeDataArray {
+    
+    NSString *_deptID = [NSString stringWithFormat:@"%@",deptItem.itemID];;
+    
+    [[ServerManager sharedManager] fetchStaffDirectoryStaffs:@"" deptID:_deptID scrollDirection:@"" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        if (success) {
+            XLog(@"Staff: %@",resultDataArray);
+            dataArray = resultDataArray;
+            [staffTableForBrowse refreshArrayData:dataArray];
+            
+        }
+    }];
+    
+}
+
+// Save Contact Data  --- off it
+-(void)saveContactDataArray {
+    
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSArray *SaveContactArray= [defaults objectForKey:kSavedContact];
+    NSMutableArray *_saveContactData = [[NSMutableArray alloc] init];
+    
+    for (int i = 0; i<SaveContactArray.count; i++) {
+        
+        NSData *decodeObject = [SaveContactArray objectAtIndex:i];
+        StaffItem *item = [NSKeyedUnarchiver unarchiveObjectWithData:decodeObject];
+        [_saveContactData addObject:item];
+    }
+
+    [staffTableForSaveContact refreshArrayData:_saveContactData];
+}
+
+
+// Get Specific Department Save Contact list from dataArray (new Added)
+
+-(void)specificDepartmentSavedContact {
+    
+    savedContactDataArray = [[NSMutableArray alloc] init];
+    
+    for (int i=0; i<dataArray.count; i++) {
+        
+        StaffItem *item = (StaffItem *)[dataArray objectAtIndex:i];
+        
+        if (item.isSaved == YES) {
+            
+            [savedContactDataArray addObject:item];
+        }
+        
+    }
+    
+    [staffTableForSaveContact refreshArrayData:savedContactDataArray];
+    
+}
+
+#pragma mark - Unused
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+
+#pragma mark - Search
+// ******* Search Option Added ************ //
+- (void)addBottomSearchBar{
+    staffSearchView = [[StaffSearchView alloc] initWithPlaceholderText:@"Search within this department"];
+    staffSearchView.delegate = self;
+    staffSearchView.searchDept = [NSString stringWithFormat:@"%@",deptItem.itemID];
+    staffSearchView.savedContact = @"NO";
+    [self.view addSubview:staffSearchView];
+}
+
+#pragma mark - StaffSearchView delegate
+- (void)searchViewRemoved{
+    XLog(@"Staff Search View delegate");
+    SHOULD_GO_BACK_TO_MENU = TRUE;
+}
+-(void)showingSearcViewOnScreen{
+    XLog(@"Staff Search Showing");
+    SHOULD_GO_BACK_TO_MENU = FALSE;
+}
+
+
+#pragma mark - StaffTableView delegate
+
+-(void)updatedUIArrayDataForTableView:(StaffItem *)oneItemData {
+    
+    
+    for (int i = 0; i < dataArray.count; i++) {
+        
+        StaffItem *item = (StaffItem*)[dataArray objectAtIndex:i];
+        
+        if ([item.itemID integerValue]==[oneItemData.itemID integerValue]) {
+            
+            [dataArray replaceObjectAtIndex:i withObject:oneItemData];
+            
+        }
+        
+    }
+    
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
+    [super scrollViewDidEndDecelerating:scrollView];
+}
+
+- (void)scrollViewScroll:(UIScrollView *)scrollView{
+    [super scrollViewDidScroll:scrollView];
+    /*
+    float endScrolling = scrollView.contentOffset.y + scrollView.frame.size.height;
+    //XLog(@"\nSCROLLING: %f ----- %f -----------  %f",endScrolling, scrollView.contentSize.height, SCREEN_SIZE.height);
+
+    
+    if (endScrolling <= 390 && endScrolling >= 380){
+        XLog(@"\n>>>>Scroll UP Called, %f",endScrolling);
+        //[self loadingPullDownView];
+        if (!isLoading && !loadingView.isRefreshing) {
+            isLoading = YES;
+            [self loadingPullDownView];
+            [self pullDownToRefresh];
+        }else{
+            //[self pullDownToRefresh];
+        }
+    }*/
+    
+}
+
+
+#pragma mark - Pull Refresh
+- (void)pullDownToRefresh{
+    StaffItem *item = (StaffItem*)[dataArray objectAtIndex:0];
+    lastElementID = [NSString stringWithFormat:@"%@",item.itemID];
+    NSString *_deptID = [NSString stringWithFormat:@"%@",deptItem.itemID];
+    [[ServerManager sharedManager] fetchStaffDirectoryStaffs:[NSString stringWithFormat:@"%@",lastElementID] deptID:_deptID scrollDirection:@"0" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        isLoading = NO;
+        [loadingView dismisssView];
+        if (success) {
+            [resultDataArray addObjectsFromArray:dataArray];
+            dataArray = resultDataArray;
+            [staffTableForBrowse refreshArrayData:dataArray];
+        }else{
+        }
+        
+    }];
+    
+}
+- (void)pullUpToRefresh{
+    StaffItem *item = (StaffItem*)[dataArray objectAtIndex:dataArray.count-1];
+    lastElementID = [NSString stringWithFormat:@"%@",item.itemID];
+    NSString *_deptID = [NSString stringWithFormat:@"%@",deptItem.itemID];;
+    
+    [[ServerManager sharedManager] fetchStaffDirectoryStaffs:[NSString stringWithFormat:@"%@",lastElementID] deptID:_deptID scrollDirection:@"1" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        isLoading = NO;
+        [loadingView dismisssView];
+        if (success) {
+            [dataArray addObjectsFromArray:resultDataArray];
+            [staffTableForBrowse refreshArrayData:dataArray];
+        }else{
+        }
+        //XLog(@"----%@-----",lastElementID);
+    }];
+}
+
+
+
+
+
+-(void)loadingPullUpView{
+    [super loadingPullUpView];
+    CGRect frame = CGRectMake(0, SCREEN_SIZE.height-40.0f-50.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+}
+
+-(void) loadingPullDownView{
+    [super loadingPullDownView];
+    CGRect frame = CGRectMake(0, 65.0f+53.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+    
+}
+
+@end

@@ -1,0 +1,245 @@
+//
+//  EventsCell.m
+//  Pulse
+//
+//  Created by Supran on 6/25/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "EventsCell.h"
+
+@implementation EventsCell
+@synthesize bookmarkButton;
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier// with:(EventItem *)_dataModel
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        // Initialization code
+        bgView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 320, 113)];
+        [bgView setBackgroundColor:[UIColor whiteColor]];
+        bgView.layer.borderColor = [UIColor lightGrayColor].CGColor;
+        bgView.layer.borderWidth = 1.0f;
+        [self addSubview:bgView];
+        
+
+
+        
+
+
+        
+
+    }
+    return self;
+}
+
+-(EventDateSubview *)createEventDateView:(NSString *)startDate with:(NSString *)endDate{
+    
+    [[self viewWithTag:9999] removeFromSuperview];
+    EventDateSubview *eventDateView = [[EventDateSubview alloc] initWithFrame:CGRectMake(0, 0, 85, bgView.frame.size.height) with:startDate with:endDate];
+    [eventDateView setTag:9999];
+    [eventDateView setBackgroundColor:[UIColor clearColor]];
+    [bgView addSubview:eventDateView];
+    return eventDateView;
+}
+
+
+-(void)createRightView:(EventDateSubview *)eventDateView withEventTitle:(NSString *)_eventTitle venue:(NSString *)_venue eventDescription:(NSString *)_eventDescription{
+    
+    [[self viewWithTag:10000] removeFromSuperview];
+    UIView *rightView = [[UIView alloc] initWithFrame:CGRectMake(eventDateView.frame.size.width, eventDateView.frame.origin.y, 220, FLT_MAX)];
+    [rightView setTag:10000];
+    [bgView addSubview:rightView];
+    
+    CGFloat dynamicRightViewHeight = [self createRightViewContentSubview:rightView eventTitle:_eventTitle venue:_venue eventDescription:_eventDescription];
+    [rightView setFrame:CGRectMake(rightView.frame.origin.x, rightView.frame.origin.y, rightView.frame.size.width, dynamicRightViewHeight)];
+    
+    //Set Centre point of Right View
+    [rightView setCenter:CGPointMake((rightView.frame.size.width/2) + eventDateView.frame.size.width, eventDateView.frame.size.height/2)];
+}
+-(CGFloat)returnMaxFont:(NSString *)text with:(CGRect)frame with:(CGFloat)fontSize{
+
+    while (fontSize > 0.0)
+    {
+        CGSize size = [text sizeWithFont:[UIFont boldSystemFontOfSize:fontSize] constrainedToSize:CGSizeMake(frame.size.width, 10000) lineBreakMode:NSLineBreakByWordWrapping];
+        
+        if (size.height <= frame.size.height) break;
+        
+        fontSize -= 1.0;
+    }
+    
+    return fontSize;
+}
+
+
+
+
+-(CGFloat)createRightViewContentSubview:(UIView *)parentView eventTitle:(NSString *)_eventTitle venue:(NSString *)_venue eventDescription:(NSString *)_eventDescription{
+    
+    
+    //create title label
+    NSString *title = _eventTitle;
+    UILabel *titleLabel = [self createTitle:title];
+    [parentView addSubview:titleLabel];
+    
+    //create venue
+    NSString *venue = _venue;
+    UILabel *venueLabel =[self createVenue:venue with:titleLabel];
+    [parentView addSubview:venueLabel];
+    
+    
+    bookmarkButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    [bookmarkButton setFrame:CGRectMake(venueLabel.frame.origin.x + venueLabel.frame.size.width, venueLabel.frame.origin.y, 50, 50)];
+    [bookmarkButton setCenter:CGPointMake(bookmarkButton.frame.origin.x + (bookmarkButton.frame.size.width/2), venueLabel.frame.origin.y )];
+    [parentView addSubview:bookmarkButton];
+    
+    
+    //create Description
+    NSString *descriptionText = _eventDescription;
+    UILabel *descriptionLabel =[self createDescription:descriptionText with:venueLabel];
+    [parentView addSubview:descriptionLabel];
+    
+    
+    return descriptionLabel.frame.origin.y + descriptionLabel.frame.size.height;
+    
+}
+
+-(UILabel *)createTitle:(NSString *)title{
+    //bound your title with maximum size
+    if([title length]>50){
+        title=[title substringToIndex:50];
+        title = [title stringByAppendingString:@"..."];
+    }
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0 , 200, 25)];
+    [titleLabel setText:title];
+    [titleLabel setTextColor:[UIColor sidraFlatDarkGrayColor]];
+    [titleLabel setBackgroundColor:[UIColor clearColor]];
+    titleLabel.adjustsFontSizeToFitWidth = NO;
+    titleLabel.numberOfLines = 0;
+    CGFloat fontSize = [self returnMaxFont:title with:titleLabel.frame with:14];
+    //set font size
+    [titleLabel setFont:[UIFont boldSystemFontOfSize:fontSize]];
+    
+    return titleLabel;
+}
+
+-(UILabel *)createVenue:(NSString *)venue with:(UILabel *)titleLabel{
+
+    //bound your title with maximum size
+    if([venue length]>50){
+        venue=[venue substringToIndex:50];
+        venue = [venue stringByAppendingString:@"..."];
+    }
+    UILabel *venueLabel = [[UILabel alloc] initWithFrame:CGRectMake(titleLabel.frame.origin.x , titleLabel.frame.origin.y + titleLabel.frame.size.height + 2, 180, 20)];
+    [venueLabel setText:venue];
+    [venueLabel setTextColor:[UIColor sidraFlatTurquoiseColor]];
+    [venueLabel setBackgroundColor:[UIColor clearColor]];
+    venueLabel.adjustsFontSizeToFitWidth = NO;
+    venueLabel.numberOfLines = 0;
+    
+    CGFloat fontSize = [self returnMaxFont:venue with:venueLabel.frame with:11];
+    //set font size
+    [venueLabel setFont:[UIFont boldSystemFontOfSize:fontSize]];
+    
+    return venueLabel;
+}
+
+-(UILabel *)createDescription:(NSString *)descriptionText with:(UILabel *)venueLabel{
+    //bound your title with maximum size
+    if([descriptionText length]>80){
+        descriptionText=[descriptionText substringToIndex:80];
+        descriptionText = [descriptionText stringByAppendingString:@"..."];
+    }
+    
+    UILabel *descriptionLabel = [[UILabel alloc] initWithFrame:CGRectMake(venueLabel.frame.origin.x , venueLabel.frame.origin.y + venueLabel.frame.size.height, 220, 40)];
+    [descriptionLabel setText:descriptionText];
+    [descriptionLabel setTextColor:[UIColor lightGrayColor]];
+    [descriptionLabel setBackgroundColor:[UIColor clearColor]];
+    descriptionLabel.adjustsFontSizeToFitWidth = NO;
+    descriptionLabel.numberOfLines = 0;
+    
+    CGFloat fontSize = [self returnMaxFont:descriptionText with:descriptionLabel.frame with:10];
+    //set font size
+    [descriptionLabel setFont:[UIFont boldSystemFontOfSize:fontSize]];
+
+    return descriptionLabel;
+}
+
+
+//
+//-(CGFloat)createRightViewContentSubview:(EventItem *)_dataModel with:(UIView *)parentView{
+//    
+//    
+//    //create title label
+//    NSString *title = _dataModel.eventTitle;
+//    //bound your title with maximum size
+//    if([title length]>55){
+//        title=[title substringToIndex:55];
+//        title = [title stringByAppendingString:@"..."];
+//    }
+//    CommonDynamicCellModel *titleLabelModel = [[CommonHelperClass sharedConstants] calculateLabelMaxSize:title with:[UIFont boldSystemFontOfSize:14.0f] with:220];
+//    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0 , titleLabelModel.maxSize.width, titleLabelModel.maxSize.height)];
+//    titleLabel.lineBreakMode = NSLineBreakByWordWrapping;
+//    titleLabel.numberOfLines = 0;
+//    [titleLabel setText:titleLabelModel.maxTitle];
+//    [titleLabel setTextColor:[UIColor sidraFlatDarkGrayColor]];
+//    [titleLabel setFont:titleLabelModel.maxFont];
+//    [titleLabel setBackgroundColor:[UIColor clearColor]];
+//    [parentView addSubview:titleLabel];
+//    
+//    
+//    //create venue
+//    NSString *venue = _dataModel.venue;
+//    //bound your title with maximum size
+//    if([venue length]>60){
+//        venue=[venue substringToIndex:60];
+//        venue = [venue stringByAppendingString:@"..."];
+//    }
+//    
+//    CommonDynamicCellModel *venueLabelModel = [[CommonHelperClass sharedConstants] calculateLabelMaxSize:venue with:[UIFont boldSystemFontOfSize:11.0f] with:220];
+//    UILabel *venueLabel = [[UILabel alloc] initWithFrame:CGRectMake(titleLabel.frame.origin.x , titleLabel.frame.origin.y + titleLabel.frame.size.height + 3, venueLabelModel.maxSize.width, venueLabelModel.maxSize.height)];
+//    venueLabel.lineBreakMode = NSLineBreakByWordWrapping;
+//    venueLabel.numberOfLines = 0;
+//    [venueLabel setText:venueLabelModel.maxTitle];
+//    [venueLabel setTextColor:[UIColor sidraFlatTurquoiseColor]];
+//    [venueLabel setFont:venueLabelModel.maxFont];
+//    [venueLabel setBackgroundColor:[UIColor clearColor]];
+//    [parentView addSubview:venueLabel];
+//    
+//    //create venue
+//    NSString *descriptionText = _dataModel.eventDescription;
+//    //bound your title with maximum size
+//    if([descriptionText length]>103){
+//        descriptionText=[descriptionText substringToIndex:100];
+//        descriptionText = [descriptionText stringByAppendingString:@"..."];
+//    }
+//
+//    CommonDynamicCellModel *descriptionLabelModel = [[CommonHelperClass sharedConstants] calculateLabelMaxSize:descriptionText with:[UIFont boldSystemFontOfSize:12.0f] with:220];
+//    UILabel *descriptionLabel = [[UILabel alloc] initWithFrame:CGRectMake(venueLabel.frame.origin.x , venueLabel.frame.origin.y + venueLabel.frame.size.height + 1, descriptionLabelModel.maxSize.width, descriptionLabelModel.maxSize.height)];
+//    descriptionLabel.lineBreakMode = NSLineBreakByWordWrapping;
+//    descriptionLabel.numberOfLines = 0;
+//    [descriptionLabel setText:descriptionLabelModel.maxTitle];
+//    [descriptionLabel setTextColor:[UIColor lightGrayColor]];
+//    [descriptionLabel setFont:venueLabelModel.maxFont];
+//    [descriptionLabel setBackgroundColor:[UIColor clearColor]];
+//    [parentView addSubview:descriptionLabel];
+//
+//
+//    return descriptionLabel.frame.origin.y + descriptionLabel.frame.size.height;
+//}
+
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

@@ -1,0 +1,105 @@
+//
+//  SettingsManager.m
+//  Pulse
+//
+//  Created by xibic on 5/28/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "SettingsManager.h"
+#import "SynthesizeSingleton.h"
+
+static NSString *SETTING_USERPUSH = @"SETTING_USERPUSHSETTINGS";
+static NSString *SETTING_USERDEVICETOKEN = @"SETTING_USERDEVICETOKEN";
+
+#pragma mark - interface
+@interface SettingsManager()
+
+DECLARE_SINGLETON_FOR_CLASS(SettingsManager)
+@property (nonatomic, retain) NSUserDefaults *userDefaults;
+
+@end
+
+
+#pragma mark - imlementation
+@implementation SettingsManager
+SYNTHESIZE_SINGLETON_FOR_CLASS(SettingsManager)
+
+@synthesize userDefaults = _userDefaults;
+
+
+
+#pragma mark - init
+- (id)init{
+    if (self = [super init]){
+        
+        self.userDefaults = [NSUserDefaults standardUserDefaults];
+        // Set some defaults for the first run of the application
+        self.pushSettings = @"1";
+        self.deviceToken = @"iOS_Simulator";
+        [self.userDefaults synchronize];
+    }
+    return self;
+}
+
+#pragma mark - Push Settings
+- (NSString *)pushSettings{
+    return [self.userDefaults stringForKey:SETTING_USERPUSH];
+}
+
+- (void)setPushSettings:(NSString *)pushSettings{
+    [self.userDefaults setObject:pushSettings forKey:SETTING_USERPUSH];
+    [self.userDefaults synchronize];
+}
+
+#pragma mark - Device Token
+- (NSString *)deviceToken{
+    return [self.userDefaults stringForKey:SETTING_USERDEVICETOKEN];
+}
+
+- (void)setDeviceToken:(NSString *)deviceToken{
+    [self.userDefaults setObject:deviceToken forKey:SETTING_USERDEVICETOKEN];
+    [self.userDefaults synchronize];
+}
+
+#pragma mark - Fonts
+
+#pragma mark - Dates
+
+
+- (NSString *)showPostedByFromDate:(NSString *)dateString{
+    
+    //*Local Date Conversion START*//
+    NSDateFormatter * dateFormatter = [[NSDateFormatter alloc]init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd HH:mm:s"];
+    NSDate * dateNotFormatted = [dateFormatter dateFromString:dateString];
+    
+    //Create a date string in the local timezone
+    dateFormatter.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:[NSTimeZone localTimeZone].secondsFromGMT];
+    NSString *localDateString = [dateFormatter stringFromDate:dateNotFormatted];
+    //NSLog(@"date = %@", localDateString);
+    NSDate *localeDate = [dateFormatter dateFromString:localDateString];
+    //*Local Date Conversion END*//
+    
+    [dateFormatter setDateFormat:@"eeee, MMMM d, YYYY HH:mm"];
+    NSString * dateFormatted = [dateFormatter stringFromDate:localeDate];
+    
+    
+    
+    NSCalendar *cal = [NSCalendar currentCalendar];
+    NSDateComponents *components = [cal components:(NSEraCalendarUnit|NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:[NSDate date]];
+    NSDate *today = [cal dateFromComponents:components];
+    components = [cal components:(NSEraCalendarUnit|NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:localeDate];
+    NSDate *otherDate = [cal dateFromComponents:components];
+    
+    NSString *returnString;
+    
+    if([today isEqualToDate:otherDate]) {
+        returnString = [NSString stringWithFormat:@"Today, %@",[dateFormatted substringFromIndex:[dateFormatted length]-5]];
+    }else{
+        returnString = [NSString stringWithFormat:@"%@",dateFormatted];
+    }
+    return  returnString;
+}
+
+@end

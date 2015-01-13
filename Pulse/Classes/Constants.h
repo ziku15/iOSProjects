@@ -1,0 +1,102 @@
+//  xibic
+//
+//  Constants.h
+//
+//com.Sidra.Pulse
+
+//  - 
+
+#import "XIBMacros.h"
+
+#import "UIColor+FlatColors.h"
+#import "UIImageView+LoadingImage.h"
+
+#import "OBShapedButton.h"
+#import "SVPullToRefresh.h"
+#import "AsyncImageView.h"
+#import "XIBFlatButtons.h"
+#import "XIBUnderLinedButton.h"
+#import "XIBCheckBox.h"
+#import "XIBSegmentControl.h"
+#import "XIBActivityIndicator.h"
+#import "XIBWebActivityIndicator.h"
+#import "XIBParser.h"
+#import "XIBPhotoScrollView.h"
+#import "Reachability.h"
+#import "STTweetLabel.h"
+#import "FullScreenPhotoViewer.h"
+
+#import "RootViewController.h"
+#import "CommonViewController.h"
+
+#import "AppManager.h"
+#import "UserManager.h"
+#import "HttpManager.h"
+#import "SettingsManager.h"
+#import "ServerManager.h"
+
+#import "CommonHelperClass.h"
+
+#import "AlertPopView.h"
+
+#define ADMOB_ID @""
+#define FB_APP_ID @""
+#define APPSTORE_ID @""
+#define APPSTORE_URL @""
+
+#define kSavedContact @"AllSaveContact"
+
+enum{
+    kAnnouncement = 1,
+    kStaffDirectory,
+    kForums,
+    kClassifieds,
+    kOffersAndPromotions,
+    kEvents,
+    kNewsLetter,
+    kGallery,
+    kHumanResources,
+    kPolicies,
+    kStayInformed
+};
+
+
+#define kImageViewContentMode UIViewContentModeScaleAspectFit
+
+#define kViewBorderWidth 0.5f
+#define kViewCornerRadius 3.5f
+#define kSubViewCornerRadius 3.5f
+#define kViewBorderColor [UIColor sidraFlatGrayColor].CGColor
+
+
+#define common_index 0
+#define staffDirectory_index 101
+#define forums_index 110
+#define classified_index 111
+#define offers_index 120
+#define events_index 121
+#define newsletter_index 200
+#define gallary_index 201
+#define hr_index 220
+#define policies_index 221
+#define stayInformed_index 230
+
+#define SERVER_BASE_API_URL @"http://114.134.91.91/sidra_pull/api/json"
+#define SERVER_BASE_IMAGE_URL @"http://114.134.91.91/sidra_pull"
+
+
+#define NO_DATA_MESSAGE @"No data available"
+/**/
+
+
+
+/*
+ 
+ 
+ dispatch_async(dispatch_get_main_queue(), ^{
+ [loadingView dismisssView];
+ });
+ 
+ 
+ 
+ */

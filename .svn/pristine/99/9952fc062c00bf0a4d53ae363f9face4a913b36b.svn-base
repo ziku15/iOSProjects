@@ -1,0 +1,205 @@
+//
+//  PressRealeseViewController.m
+//  Pulse
+//
+//  Created by Atomix on 7/10/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "PressRealeseViewController.h"
+#import "StayInformedTableCell.h"
+#import "PressReleaseItem.h"
+#import "PressDetailsViewController.h"
+
+#define CELL_HEIGHT 50
+
+@interface PressRealeseViewController () <UITableViewDelegate,UITableViewDataSource> {
+    
+    NSMutableArray *pressReleaseDataArray;
+    UITableView *tableViewPressRelease;
+}
+
+@end
+
+@implementation PressRealeseViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        
+        self.title = @"Press Release";
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    SCROLL_CONSIDER_HEIGHT = 200;
+    // demo Test data Array
+    
+//    pressReleaseDataArray = [[NSMutableArray alloc] init];
+//    
+//    for (int i = 0; i<10; i++) {
+//        
+//        PressReleaseItem *item = [[PressReleaseItem alloc] init];
+//        item.title = [NSString stringWithFormat:@"Press Release title .. %d",i];
+//        item.releaseDate = [NSString stringWithFormat:@"Sunday April 3, 2014 15:00"];
+//        item.content =[NSString stringWithFormat:@"%d If no suitable articles already exist or the subject has enough depth for an article of its own then you should consider starting a new article. First, to avoid the possible disappointment of your article being rapidly deleted, make sure that it meets Wikipedia's requirements for inclusion. In brief, this means that the subject must have been mentioned in some detail by at least one (and preferably several) independent academically respectable sources. For more details see the section on this page Things to avoid and the articles on notability and reliable sources. There are three ways to create an article possible disappointment of your article being rapidly deleted, make sure that it meets Wikipedia's requirements for inclusion. In brief, this means that the subject must have been mentioned in some detail by at least one (and preferably several) independent academically respectable sources. For more details see the section on this page Things to avoid and the articles on notability and reliable sources. There are three ways to create an article possible disappointment of your article being rapidly deleted, make sure that it meets Wikipedia's requirements for inclusion. In brief, this means that the subject must have been mentioned in some detail by at least one (and preferably several) independent academically respectable sources. For more details see the section on this page Things to avoid and the articles on notability and reliable sources. There are three ways to create an article",i];
+//        
+//        [pressReleaseDataArray addObject:item];
+//        item = nil;
+//    }
+    
+    
+    //Press Release Table View
+    
+    tableViewPressRelease = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, [[UIScreen mainScreen] bounds].size.height - 65)];
+    
+    [tableViewPressRelease setBackgroundColor:[UIColor clearColor]];
+    [tableViewPressRelease setDelegate:self];
+    [tableViewPressRelease setDataSource:self];
+    [tableViewPressRelease setScrollEnabled:YES];
+    //deptListTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    tableViewPressRelease.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    [self.view addSubview:tableViewPressRelease];
+    
+    [[ServerManager sharedManager] fetchPressReleases:@"" scrollDirection:@"" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        if (success) {
+            pressReleaseDataArray = resultDataArray;
+            [tableViewPressRelease reloadData];
+        }
+    }];
+    
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+#pragma mark - Table view data source
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    // Return the number of sections.
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    // Return the number of rows in the section.
+    
+    if ([pressReleaseDataArray count]==0) {
+        return 0;
+    }
+    else
+        return [pressReleaseDataArray count];
+    
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    static NSString *cellIdentifier = @"Cell";
+    
+    StayInformedTableCell *cell = (StayInformedTableCell *)[tableView dequeueReusableCellWithIdentifier:cellIdentifier];
+    
+    // If there is no cell to reuse, create a new one
+    if(cell == nil){
+        
+        cell = [[StayInformedTableCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
+        cell.itemName.frame = CGRectMake(15, 15, 200, 20);
+        cell.roundArrow.frame =CGRectMake(self.view.frame.size.width - 30, 15, 20, 20);
+    }
+    
+    
+    PressReleaseItem *item = (PressReleaseItem *)[pressReleaseDataArray objectAtIndex:indexPath.row];
+    cell.itemName.text = item.title;
+    
+    return cell;
+    
+}
+
+#pragma mark - Table view delegate
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    [tableViewPressRelease deselectRowAtIndexPath:[tableView indexPathForSelectedRow] animated:YES];
+    
+    PressReleaseItem *item = (PressReleaseItem *)[pressReleaseDataArray objectAtIndex:indexPath.row];
+    
+    
+    PressDetailsViewController *_pressDetailsView = [[PressDetailsViewController alloc] initWithNibName:@"PressDetailsViewController" bundle:nil];
+    _pressDetailsView.shouldShowRightMenuButton = YES ;
+    _pressDetailsView.itemDetailsArray = item;
+    [self.navigationController pushViewController:_pressDetailsView animated:YES];
+        
+
+    
+}
+
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    return  CELL_HEIGHT;
+}
+
+
+#pragma mark - Pull Refresh
+- (void)pullDownToRefresh{
+    PressReleaseItem *item = (PressReleaseItem *)[pressReleaseDataArray objectAtIndex:0];
+    lastElementID = [NSString stringWithFormat:@"%@",item.itemID];
+    [[ServerManager sharedManager] fetchPressReleases:[NSString stringWithFormat:@"%@",lastElementID] scrollDirection:@"0" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        isLoading = NO;
+        [loadingView dismisssView];
+        if (success) {
+            [resultDataArray addObjectsFromArray:pressReleaseDataArray];
+            pressReleaseDataArray = resultDataArray;
+            [tableViewPressRelease reloadData];
+        }else{
+        }
+        
+    }];
+    
+}
+- (void)pullUpToRefresh{
+    PressReleaseItem *item = (PressReleaseItem *)[pressReleaseDataArray objectAtIndex:pressReleaseDataArray.count-1];
+    lastElementID = [NSString stringWithFormat:@"%@",item.itemID];
+    [[ServerManager sharedManager] fetchPressReleases:[NSString stringWithFormat:@"%@",lastElementID] scrollDirection:@"1" completion:^(BOOL success, NSMutableArray *resultDataArray) {
+        isLoading = NO;
+        [loadingView dismisssView];
+        if (success) {
+            [pressReleaseDataArray addObjectsFromArray:resultDataArray];
+            [tableViewPressRelease reloadData];
+        }else{
+        }
+        XLog(@"----%@-----",lastElementID);
+    }];
+    
+}
+
+-(void)loadingPullUpView{
+    [super loadingPullUpView];
+    CGRect frame = CGRectMake(0, SCREEN_SIZE.height-40.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+}
+
+-(void) loadingPullDownView{
+    [super loadingPullDownView];
+    CGRect frame = CGRectMake(0, 65.0f, SCREEN_SIZE.width, 40.0f);
+    loadingView.frame = frame;
+    loadingView.alpha = 1.0f;
+    [loadingView apeareLoadingView];
+    
+}
+
+@end

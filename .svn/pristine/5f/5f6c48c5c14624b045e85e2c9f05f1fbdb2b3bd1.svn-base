@@ -1,0 +1,86 @@
+//
+//  PressDetailsViewController.m
+//  Pulse
+//
+//  Created by Atomix on 7/10/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "PressDetailsViewController.h"
+
+@interface PressDetailsViewController () {
+    
+    UITextView *showReleaseDetails;
+}
+
+@end
+
+@implementation PressDetailsViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        
+        self.title = @"Press Details";
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    
+    [self releaseDetails];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+// UI Design section
+-(void) releaseDetails {
+    
+    NSString *overview = [NSString stringWithFormat:@"\n\n\n\n%@",self.itemDetailsArray.content];
+    
+    
+    showReleaseDetails = [[UITextView alloc] initWithFrame:CGRectMake(7, 7, 306,[[UIScreen mainScreen] bounds].size.height - 78)];
+    showReleaseDetails.backgroundColor = [UIColor whiteColor];
+    [showReleaseDetails setEditable:NO];
+    showReleaseDetails.text = overview;
+    [showReleaseDetails setFont:[UIFont systemFontOfSize:12.5]];
+    showReleaseDetails.textColor = [UIColor lightGrayColor];
+    
+    //To make the border look very close to a UITextField
+    [showReleaseDetails.layer setBorderColor:kViewBorderColor];
+    [showReleaseDetails.layer setBorderWidth:kViewBorderWidth];
+    
+    //The rounded corner part, where you specify your view's corner radius:
+    showReleaseDetails.layer.cornerRadius = kSubViewCornerRadius;
+    showReleaseDetails.clipsToBounds = YES;
+    
+    [self.view addSubview:showReleaseDetails];
+    
+    // Title
+    UILabel *titleText = [[UILabel alloc] initWithFrame:CGRectMake(5, 0, 300, 40)];
+    titleText.text = self.itemDetailsArray.title;
+    titleText.numberOfLines = 2;
+    [titleText setFont:[UIFont systemFontOfSize:14]];
+    titleText.textColor = [UIColor blackColor];
+    [showReleaseDetails addSubview:titleText];
+    
+    // Date
+    UILabel *date =  [[UILabel alloc] initWithFrame:CGRectMake(5, 45, 320, 15)];
+    date.text =  [[SettingsManager sharedManager] showPostedByFromDate:self.itemDetailsArray.releaseDate];//self.itemDetailsArray.releaseDate;
+    [date setFont:[UIFont systemFontOfSize:10]];
+    date.textColor = [UIColor redColor];
+    [showReleaseDetails addSubview:date];
+    
+}
+
+@end

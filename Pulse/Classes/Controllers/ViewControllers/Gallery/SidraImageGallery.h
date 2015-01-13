@@ -1,0 +1,33 @@
+//
+//  SidraImageGallery.h
+//  Pulse
+//
+//  Created by xibic on 6/25/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "MediaItem.h"
+
+@protocol SidraImageGalleryDelegate <NSObject>
+
+@optional
+- (void)clickedItem:(int)itemIndex;
+- (void)loadNextSetOfImages;
+- (void)loadNewSetOfImages;
+- (void)imageLoadingPullUpView;
+- (void)imageLoadingPullDownView;
+- (void) dismisssView;
+
+@end
+
+
+@interface SidraImageGallery : UIView
+
+@property(nonatomic, retain) id<SidraImageGalleryDelegate>delegate;
+- (void)showGalleryImages:(NSArray *)photosArray;
+- (void)addGalleryImages:(NSArray *)photosArray;
+- (void)addGalleryImages_Infront:(NSArray *)photosArray;
+@property(nonatomic, retain) NSMutableArray *mediaItemArray;
+
+@end

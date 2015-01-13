@@ -1,0 +1,227 @@
+//
+//  XIBPhotoScrollView.m
+//  Pulse
+//
+//  Created by xibic on 6/26/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#import "XIBPhotoScrollView.h"
+
+@interface XIBPhotoScrollView()<UIScrollViewDelegate>{
+    int pageNumber;
+    UIScrollView *photoScrollView;
+    UIPageControl *pageController;
+}
+
+@end
+
+@implementation XIBPhotoScrollView
+
+@synthesize delegate;
+
+- (id)initWithFrame:(CGRect)frame withPhotos:(NSArray *)photoArray{
+    self = [super initWithFrame:frame];
+    if (self) {
+        // Initialization code
+        self.backgroundColor = [UIColor clearColor];
+        self.layer.borderColor = [UIColor clearColor].CGColor;
+        //self.layer.borderWidth = 4.0f;
+        //self.layer.cornerRadius = 2.5f;
+        //self.layer.masksToBounds = YES;
+        
+        photoScrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0.0f, 0, frame.size.width-0.0f, frame.size.height-0.0f)];
+        photoScrollView.backgroundColor = [UIColor clearColor];
+        photoScrollView.showsHorizontalScrollIndicator = NO;
+        photoScrollView.showsVerticalScrollIndicator = NO;
+        photoScrollView.pagingEnabled = photoScrollView.userInteractionEnabled = YES;
+        photoScrollView.delegate = self;
+        photoScrollView.bounces = NO;
+        
+        int numberOfViews = [photoArray count];
+        for (int i=0; i<numberOfViews; i++) {
+            
+            UIView *imageBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(i*photoScrollView.frame.size.width+10.0f,
+                                                                                   0.0f,
+                                                                                   photoScrollView.frame.size.width-20.0f,
+                                                                                   photoScrollView.frame.size.height)];
+            imageBackgroundView.backgroundColor = [UIColor whiteColor];
+            imageBackgroundView.layer.borderColor = [UIColor sidraFlatGrayColor].CGColor;
+            imageBackgroundView.layer.borderWidth = 0.5f;
+            imageBackgroundView.layer.cornerRadius = 2.5f;
+            [photoScrollView addSubview:imageBackgroundView];
+            
+            AsyncImageView *imageView = [[AsyncImageView alloc] initWithFrame:CGRectMake(i*photoScrollView.frame.size.width+16.0f,
+                                                                                   6.0f,
+                                                                                   photoScrollView.frame.size.width-32.0f,
+                                                                                   photoScrollView.frame.size.height-12.0f)];
+            //imageView.layer.borderColor = [UIColor whiteColor].CGColor;
+            //imageView.layer.borderWidth = 2.0f;
+            imageView.autoresizingMask = ( UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin);
+          
+            imageView.contentMode = kImageViewContentMode;
+            imageView.tag = i;
+            imageView.clipsToBounds = NO;
+            imageView.showActivityIndicator = YES;
+            imageView.image = [UIImage imageNamed:@"PlaceHolderImg.png"];
+            NSString *imageURLString = [photoArray objectAtIndex:i];
+            imageURLString = [imageURLString isEqual:[NSNull null]] ? @"" : imageURLString ;
+            
+            if ([imageURLString rangeOfString:@"http"].location == NSNotFound) {
+                imageView.imageURL = [NSURL URLWithString:[[NSString stringWithFormat:@"%@/%@",SERVER_BASE_IMAGE_URL,[photoArray objectAtIndex:i]] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+            }  else {
+                imageView.imageURL = [NSURL URLWithString:[[NSString stringWithFormat:@"%@",[photoArray objectAtIndex:i]] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+            }
+//            imageView.imageURL = [NSURL URLWithString:[[NSString stringWithFormat:@"%@/%@",SERVER_BASE_IMAGE_URL,[photoArray objectAtIndex:i]] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+            imageView.userInteractionEnabled = YES;
+            UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTap:)];
+            [singleTap setNumberOfTapsRequired:1];
+            [imageView addGestureRecognizer:singleTap];
+            
+            
+            [photoScrollView addSubview:imageView];
+            photoScrollView.contentSize = CGSizeMake(photoScrollView.contentSize.width+imageView.frame.size.width+32.0f, photoScrollView.frame.size.height);
+        }
+        
+        [self addSubview:photoScrollView];
+        
+        if (numberOfViews>1) {
+            CGRect f = CGRectMake(0, 0, 240.0f, 20.0f);
+            pageController = [[UIPageControl alloc] initWithFrame:f];
+            pageController.userInteractionEnabled = NO;
+            pageController.clipsToBounds = NO;
+            pageController.center = CGPointMake(self.frame.size.width / 2, self.frame.size.height / 2);
+            f = pageController.frame;
+            f.origin.y = self.frame.size.height-3.0f;
+            pageController.frame = f;
+            pageController.numberOfPages = numberOfViews;
+            pageController.currentPage = 0;
+            if ([pageController respondsToSelector:@selector(setPageIndicatorTintColor:)]) {
+                pageController.pageIndicatorTintColor = [UIColor grayColor];
+                pageController.currentPageIndicatorTintColor = [UIColor sidraFlatTurquoiseColor];
+            }
+            [self addSubview:pageController];
+        }
+        
+        
+    }
+    return self;
+}
+
+#pragma initialiezation for classified 
+
+- (id)initWithFrameForClassified:(CGRect)frame withPhotos:(NSArray *)photoArray{
+    self = [super initWithFrame:frame];
+    if (self) {
+        // Initialization code
+        self.backgroundColor = [UIColor clearColor];
+        self.layer.borderColor = [UIColor clearColor].CGColor;
+        //self.layer.borderWidth = 4.0f;
+        //self.layer.cornerRadius = 2.5f;
+        //self.layer.masksToBounds = YES;
+        
+        photoScrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0.0f, 0, frame.size.width-0.0f, frame.size.height-0.0f)];
+        photoScrollView.backgroundColor = [UIColor clearColor];
+        photoScrollView.showsHorizontalScrollIndicator = NO;
+        photoScrollView.showsVerticalScrollIndicator = NO;
+        photoScrollView.pagingEnabled = photoScrollView.userInteractionEnabled = YES;
+        photoScrollView.delegate = self;
+        photoScrollView.bounces = NO;
+        
+        int numberOfViews = [photoArray count];
+        for (int i=0; i<numberOfViews; i++) {
+            
+            UIView *imageBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(i*photoScrollView.frame.size.width+10.0f,
+                                                                                   0.0f,
+                                                                                   photoScrollView.frame.size.width-20.0f,
+                                                                                   photoScrollView.frame.size.height)];
+            imageBackgroundView.backgroundColor = [UIColor whiteColor];
+            imageBackgroundView.layer.borderColor = [UIColor sidraFlatGrayColor].CGColor;
+            imageBackgroundView.layer.borderWidth = 0.5f;
+            imageBackgroundView.layer.cornerRadius = 2.5f;
+            [photoScrollView addSubview:imageBackgroundView];
+            
+            AsyncImageView *imageView = [[AsyncImageView alloc] initWithFrame:CGRectMake(i*photoScrollView.frame.size.width+16.0f,
+                                                                                         6.0f,
+                                                                                         photoScrollView.frame.size.width-32.0f,
+                                                                                         photoScrollView.frame.size.height-12.0f)];
+            //imageView.layer.borderColor = [UIColor whiteColor].CGColor;
+            //imageView.layer.borderWidth = 2.0f;
+            imageView.autoresizingMask = ( UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin);
+            
+            imageView.contentMode = kImageViewContentMode;
+            imageView.tag = i;
+            imageView.clipsToBounds = NO;
+            imageView.showActivityIndicator = YES;
+            imageView.image = (UIImage *)[photoArray objectAtIndex:i];
+            imageView.userInteractionEnabled = YES;
+            UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTap:)];
+            [singleTap setNumberOfTapsRequired:1];
+            [imageView addGestureRecognizer:singleTap];
+            
+            
+            [photoScrollView addSubview:imageView];
+            photoScrollView.contentSize = CGSizeMake(photoScrollView.contentSize.width+imageView.frame.size.width+32.0f, photoScrollView.frame.size.height);
+        }
+        
+        [self addSubview:photoScrollView];
+        
+        if (numberOfViews>1) {
+            CGRect f = CGRectMake(0, 0, 240.0f, 20.0f);
+            pageController = [[UIPageControl alloc] initWithFrame:f];
+            pageController.userInteractionEnabled = NO;
+            pageController.clipsToBounds = NO;
+            pageController.center = CGPointMake(self.frame.size.width / 2, self.frame.size.height / 2);
+            f = pageController.frame;
+            f.origin.y = self.frame.size.height-3.0f;
+            pageController.frame = f;
+            pageController.numberOfPages = numberOfViews;
+            pageController.currentPage = 0;
+            if ([pageController respondsToSelector:@selector(setPageIndicatorTintColor:)]) {
+                pageController.pageIndicatorTintColor = [UIColor grayColor];
+                pageController.currentPageIndicatorTintColor = [UIColor sidraFlatTurquoiseColor];
+            }
+            [self addSubview:pageController];
+        }
+        
+        
+    }
+    return self;
+}
+
+
+
+
+
+- (void)scrollViewDidScroll:(UIScrollView *)sender {
+    CGFloat pageWidth = photoScrollView.frame.size.width;
+    int page = floor((photoScrollView.contentOffset.x - pageWidth / 2) / pageWidth) + 1;
+    pageController.currentPage = page;
+	
+}
+
+
+#pragma mark Gesture Handling methods
+
+- (void)handleSingleTap:(UIGestureRecognizer *)gestureRecognizer {
+    UIView *view = (UIView*)[gestureRecognizer view];
+    //[self.xibImageDelegate imageClicked:imageName];
+    [self.delegate imageTap:view.tag];
+}
+
+#pragma mark - GestureRecognizer Delegate
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    return YES;
+}
+
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+
+@end

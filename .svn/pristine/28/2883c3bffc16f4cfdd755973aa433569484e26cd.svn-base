@@ -1,0 +1,23 @@
+//
+//  AllClassifiedDetailsViewController.h
+//  Pulse
+//
+//  Created by Supran on 7/9/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+
+#import "ClassifiedItem.h"
+#import <UIKit/UIKit.h>
+#import <MessageUI/MFMailComposeViewController.h>
+
+@interface ClassifiedDetailsViewController : CommonViewController <MFMailComposeViewControllerDelegate>
+{
+    ClassifiedItem *dataItems;
+}
+
+@property(nonatomic) BOOL isDeleteClick;
+@property(nonatomic) NSInteger selectedIndex;
+-(id)init:(ClassifiedItem *)item selectionIndex:(NSInteger)selIndex;
+
+@end

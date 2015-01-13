@@ -1,0 +1,344 @@
+//
+//  EventsDetailsViewController.m
+//  Pulse
+//
+//  Created by Supran on 6/26/14.
+//  Copyright (c) 2014 Atomix. All rights reserved.
+//
+
+#define LINE_COLOR [UIColor lightGrayColor]
+#define ALPHA_VALUE 1.0f
+
+#import "EventsDetailsViewController.h"
+
+@interface EventsDetailsViewController (){
+    
+    UIScrollView *mainScrollview;
+}
+
+
+
+@end
+
+@implementation EventsDetailsViewController
+@synthesize detailsItem, selectedIndex;
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+
+-(id)init:(EventItem *)item with:(NSInteger)index{
+    self = [super init];
+    if (self) {
+
+        detailsItem = item;
+        selectedIndex = index;
+        
+        self.title = detailsItem.eventTitle;//@"Events Title";        
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+    //Create main Scrollview
+    mainScrollview = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, SCREEN_SIZE.height - 60)];
+    [mainScrollview setContentSize:CGSizeMake(mainScrollview.frame.size.width, mainScrollview.frame.size.height)];
+    [mainScrollview setBounces:NO];
+    [self.view addSubview:mainScrollview];
+    
+    NSString *maximumTitle = detailsItem.eventTitle;
+    //Create Title
+    CGRect titleFrame =  [self createTitleView:maximumTitle];
+    //Create DateTime
+    CGRect dateTimeFrame =  [self createDateAndTimeView:detailsItem.startDate with:detailsItem.endDate with:titleFrame];
+    //Create Vanue
+    CGRect vanueFrame =  [self createVanueView:dateTimeFrame with:detailsItem.venue];
+
+    CGRect favoraiteFrame;
+    if (self.isBookmarkedVisible) {
+        //Create Favoraite
+        favoraiteFrame =  [self createFavoraiteView:vanueFrame with:detailsItem.isBookmarked];
+    }
+    else{
+        favoraiteFrame = CGRectMake(vanueFrame.origin.x, vanueFrame.origin.y + vanueFrame.size.height + 5, vanueFrame.size.width, 24);
+    }
+    //Create Description Title View
+    CGRect descriptionTitleFrame =  [self createDescriptionHeadline:favoraiteFrame];
+    //Description View
+    CGRect descriptionViewFrame = [self createDescriptionView:descriptionTitleFrame with:detailsItem.eventDescription];
+    
+    
+    [mainScrollview setContentSize:CGSizeMake(descriptionViewFrame.size.width, descriptionViewFrame.origin.y + descriptionViewFrame.size.height + 10)];
+}
+
+
+#pragma mark - create Description view
+
+-(CGRect)createDescriptionView:(CGRect)previousFrame with:(NSString *)descriptionText{
+    // Create title label
+    CommonDynamicCellModel *descriptionModel = [[CommonHelperClass sharedConstants] calculateLabelMaxSize:descriptionText with:[UIFont systemFontOfSize:14.0f] with:290];
+    
+    CGFloat desHeight = mainScrollview.frame.size.height - (previousFrame.size.height + previousFrame.origin.y + 10);
+    //CGFloat desHeight = 340;
+    UIView *descriptionView = [[UIView alloc] initWithFrame:CGRectMake(previousFrame.origin.x, previousFrame.origin.y + previousFrame.size.height, previousFrame.size.width, (descriptionModel.maxSize.height + 15 < desHeight?desHeight:descriptionModel.maxSize.height + 15))];
+    [descriptionView setBackgroundColor:[UIColor whiteColor]];
+    [mainScrollview addSubview:descriptionView];
+    
+    UILabel *descriptionLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, 5, descriptionModel.maxSize.width, descriptionModel.maxSize.height)];
+    descriptionLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    descriptionLabel.numberOfLines = 0;
+    [descriptionLabel setFont:descriptionModel.maxFont];
+    [descriptionLabel setTextColor:[UIColor blackColor]];
+    [descriptionLabel setText:descriptionModel.maxTitle];
+    [descriptionLabel setBackgroundColor:[UIColor clearColor]];
+    [descriptionView addSubview:descriptionLabel];
+    
+    return descriptionView.frame;
+}
+
+
+#pragma mark - create Description Headline
+
+-(CGRect)createDescriptionHeadline:(CGRect)previousFrame{
+    UIView *descriptionTitleView = [[UIView alloc] initWithFrame:CGRectMake(previousFrame.origin.x, previousFrame.origin.y + previousFrame.size.height + 5, previousFrame.size.width, 20)];
+    [descriptionTitleView setBackgroundColor:[UIColor whiteColor]];
+    [mainScrollview addSubview:descriptionTitleView];
+    
+    UILabel *titleLable = [[UILabel alloc] initWithFrame:CGRectMake(15, 0, descriptionTitleView.frame.size.width - 30, descriptionTitleView.frame.size.height)];
+    [titleLable setFont:[UIFont boldSystemFontOfSize:15.0f]];
+    [titleLable setTextColor:[UIColor sidraFlatTurquoiseColor]];
+    [titleLable setText:@"Description"];
+    [titleLable setBackgroundColor:[UIColor clearColor]];
+    [descriptionTitleView addSubview:titleLable];
+    
+    return descriptionTitleView.frame;
+}
+
+
+#pragma mark - Create Favoraite View
+-(CGRect)createFavoraiteView:(CGRect)previousFrame with:(BOOL)isFavoraite{
+    UIView *favoraiteView = [[UIView alloc] initWithFrame:CGRectMake(previousFrame.origin.x, previousFrame.origin.y + previousFrame.size.height + 10, previousFrame.size.width, 32)];
+    [favoraiteView setBackgroundColor:[UIColor clearColor]];
+    [mainScrollview addSubview:favoraiteView];
+    
+    UIButton *favoraiteButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    [favoraiteButton setFrame:CGRectMake(15, 0 , 200, 30)];
+    [favoraiteButton addTarget:self
+                       action:@selector(bookmarkAction:)
+             forControlEvents:UIControlEventTouchUpInside];
+    [favoraiteButton setImage:[UIImage imageNamed:[self getfavoraiteImageName:isFavoraite]] forState:UIControlStateNormal];
+    [favoraiteView addSubview:favoraiteButton];
+    
+//    UIView *bottomLineView = [[UIView alloc] initWithFrame:CGRectMake(0, favoraiteButton.frame.origin.y + favoraiteButton.frame.size.height + 5, favoraiteView.frame.size.width, 1.50f)];
+//    [bottomLineView setBackgroundColor:LINE_COLOR];
+//    [bottomLineView setAlpha:ALPHA_VALUE];
+//    [favoraiteView addSubview:bottomLineView];
+    
+    return favoraiteView.frame;
+}
+
+#pragma mark - Button Action
+
+-(IBAction)bookmarkAction:(id)sender{
+    UIButton *temp = (UIButton *)sender;
+    
+    [[ServerManager sharedManager] favoriteEvent:detailsItem.isBookmarked?@"0":@"1" eventID:detailsItem.itemID completion:^(BOOL success){
+        if (success) {
+            detailsItem.isBookmarked = !detailsItem.isBookmarked;
+            [temp setImage:[UIImage imageNamed:[self getfavoraiteImageName:detailsItem.isBookmarked]] forState:UIControlStateNormal];
+        }
+    }];
+    
+    
+    
+}
+-(NSString *)getfavoraiteImageName:(BOOL)isfavoraite{
+    NSString *bookmarkedImageName = @"";
+    if (isfavoraite) {
+        bookmarkedImageName = @"remove_event_btn.png";
+    }
+    else{
+        bookmarkedImageName = @"add_event_btn.png";
+    }
+    return bookmarkedImageName;
+}
+
+#pragma mark - Create Vanue View
+-(CGRect)createVanueView:(CGRect)previousFrame with:(NSString *)vanueText{
+    UIView *vanueView = [[UIView alloc] initWithFrame:CGRectMake(previousFrame.origin.x, previousFrame.origin.y + previousFrame.size.height + 3, previousFrame.size.width, 13)];
+    [vanueView setBackgroundColor:[UIColor clearColor]];
+    [mainScrollview addSubview:vanueView];
+    
+    
+    UIImageView *vanueImageView = [[UIImageView alloc] initWithFrame:CGRectMake(13, 2, 10, 10)];
+    [vanueImageView setImage:[UIImage imageNamed:@"map_icon.png"]];
+    [vanueImageView setBackgroundColor:[UIColor clearColor]];
+    [vanueView addSubview:vanueImageView];
+    
+    UILabel *topTimeLable = [[UILabel alloc] initWithFrame:CGRectMake(vanueImageView.frame.origin.x + vanueImageView.frame.size.width + 2.5, 0, vanueView.frame.size.width - (vanueImageView.frame.origin.x + vanueImageView.frame.size.width + 20), 15)];
+    topTimeLable.lineBreakMode = NSLineBreakByWordWrapping;
+    topTimeLable.numberOfLines = 0;
+    [topTimeLable setFont:[UIFont boldSystemFontOfSize:12.0f]];
+    [topTimeLable setTextColor:[UIColor sidraFlatGreenColor]];
+    [topTimeLable setText:vanueText];
+    [topTimeLable setBackgroundColor:[UIColor clearColor]];
+    [vanueView addSubview:topTimeLable];
+
+    return vanueView.frame;
+}
+
+#pragma mark - Create Date And Time View
+-(CGRect)createDateAndTimeView:(NSString *)start_date with:(NSString *)end_date with:(CGRect)previousFrame{
+    UIView *dateTimeView = [[UIView alloc] initWithFrame:CGRectMake(previousFrame.origin.x, previousFrame.origin.y + previousFrame.size.height, previousFrame.size.width, 21)];
+    [dateTimeView setBackgroundColor:[UIColor clearColor]];
+    [mainScrollview addSubview:dateTimeView];
+    
+
+    
+    UIView *startDateView = [self createDateView:CGRectMake(0, 0, 0, dateTimeView.frame.size.height) with:start_date];
+    [dateTimeView addSubview:startDateView];
+    //Select which type view show
+    NSMutableArray *dateArray = [[CommonHelperClass sharedConstants] findsDatesBetweenTwoSelectedDates:start_date endDay:end_date];
+    if (dateArray.count > 1) {
+        //Have difference between two date
+        UIView *endDateView = [self createDateView:CGRectMake(startDateView.frame.origin.x + startDateView.frame.size.width, 0, 0, dateTimeView.frame.size.height) with:end_date];
+        [dateTimeView addSubview:endDateView];
+    }
+    else{
+        //Same Date So create time view
+        [self createTimeView:startDateView with:start_date with:end_date with:dateTimeView];
+    }
+    
+    return dateTimeView.frame;
+}
+
+#pragma mark - Create Time View
+-(void)createTimeView:(UIView *)previousView with:(NSString *)start_date with:(NSString *)end_date with:(UIView *)parentView
+{
+    UIView *dateTimeView = [[UIView alloc] initWithFrame:CGRectMake(previousView.frame.origin.x + previousView.frame.size.width , previousView.frame.origin.y, previousView.frame.size.width, previousView.frame.size.height)];
+    [dateTimeView setBackgroundColor:[UIColor clearColor]];
+    [parentView addSubview:dateTimeView];
+    
+    UIImageView *firstDateImageView = [[UIImageView alloc] initWithFrame:CGRectMake(15, 7, 8, 8)];
+    [firstDateImageView setImage:[UIImage imageNamed:@"time_icon.png"]];
+    [dateTimeView addSubview:firstDateImageView];
+    
+    UILabel *topTimeLable = [[UILabel alloc] initWithFrame:CGRectMake(firstDateImageView.frame.origin.x + firstDateImageView.frame.size.width + 4, 4, 30, 12)];
+    topTimeLable.lineBreakMode = NSLineBreakByWordWrapping;
+    topTimeLable.numberOfLines = 0;
+    [topTimeLable setFont:[UIFont boldSystemFontOfSize:10.0f]];
+    [topTimeLable setTextColor:[UIColor sidraFlatRedColor]];
+    [topTimeLable setText:[[CommonHelperClass sharedConstants] getTime:start_date]];
+    [topTimeLable setBackgroundColor:[UIColor clearColor]];
+    [dateTimeView addSubview:topTimeLable];
+    
+    
+    UILabel *toLable = [[UILabel alloc] initWithFrame:CGRectMake(topTimeLable.frame.origin.x + topTimeLable.frame.size.width, topTimeLable.frame.origin.y, 10, + topTimeLable.frame.size.height)];
+    [toLable setFont:[UIFont boldSystemFontOfSize:09.0f]];
+    toLable.textAlignment = NSTextAlignmentCenter;
+    [toLable setTextColor:[UIColor sidraFlatRedColor]];
+    [toLable setBackgroundColor:[UIColor clearColor]];
+    [toLable setText:@"to"];
+    [dateTimeView addSubview:toLable];
+    
+
+    UILabel *bottomTimeLable = [[UILabel alloc] initWithFrame:CGRectMake(toLable.frame.origin.x + toLable.frame.size.width, toLable.frame.origin.y , topTimeLable.frame.size.width, topTimeLable.frame.size.height)];
+    [bottomTimeLable setFont:[UIFont boldSystemFontOfSize:10.0f]];
+    bottomTimeLable.textAlignment = NSTextAlignmentCenter;
+    [bottomTimeLable setTextColor:[UIColor sidraFlatRedColor]];
+    [bottomTimeLable setBackgroundColor:[UIColor clearColor]];
+    [bottomTimeLable setText:[[CommonHelperClass sharedConstants] getTime:end_date]];
+    [dateTimeView addSubview:bottomTimeLable];
+}
+
+#pragma mark - Create Date View
+-(UIView *)createDateView:(CGRect)expectedFrame with:(NSString *)_date
+{
+    UIView *dateTimeView = [[UIView alloc] initWithFrame:CGRectMake(expectedFrame.origin.x, 0, 160, expectedFrame.size.height)];
+    [dateTimeView setBackgroundColor:[UIColor clearColor]];
+//    [previousView addSubview:dateTimeView];
+    
+    UIImageView *firstDateImageView = [[UIImageView alloc] initWithFrame:CGRectMake(15, 7, 8, 8)];
+    [firstDateImageView setImage:[UIImage imageNamed:@"date_icon.png"]];
+    [dateTimeView addSubview:firstDateImageView];
+    
+    UILabel *timeLabel = [[UILabel alloc] initWithFrame:CGRectMake(firstDateImageView.frame.origin.x + firstDateImageView.frame.size.width + 4, 4, 110, 12)];
+    timeLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    timeLabel.numberOfLines = 0;
+    [timeLabel setFont:[UIFont boldSystemFontOfSize:12.0f]];
+    [timeLabel setTextColor:[UIColor sidraFlatRedColor]];
+    [timeLabel setText:[[CommonHelperClass sharedConstants] getDateNameFormat:_date]];
+    [timeLabel setBackgroundColor:[UIColor clearColor]];
+    [dateTimeView addSubview:timeLabel];
+    
+    return dateTimeView;
+}
+
+#pragma mark - Create Title View
+
+-(CGRect)createTitleView:(NSString *)maximumTitle{
+    
+    UIView * wrapperHeading = [[UIView alloc] initWithFrame:CGRectMake(0, 0, mainScrollview.frame.size.width, 35)];
+    [wrapperHeading setBackgroundColor:[UIColor whiteColor]];
+    
+    UIView *topTitleView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, mainScrollview.frame.size.width, 50)];
+    [topTitleView setBackgroundColor:[UIColor sidraFlatLightGrayColor]];
+    //[mainScrollview addSubview:topTitleView];
+    
+    UIView *topHeadLineView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, mainScrollview.frame.size.width, 0.80f)];
+    [topHeadLineView setBackgroundColor:LINE_COLOR];
+    [topHeadLineView setAlpha:ALPHA_VALUE];
+    [topTitleView addSubview:topHeadLineView];
+    
+    
+    if([maximumTitle length]>110){
+        maximumTitle=[maximumTitle substringToIndex:107];
+        maximumTitle = [maximumTitle stringByAppendingString:@"..."];
+    }
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(15, topHeadLineView.frame.origin.y + 5, 290, 30)];
+    titleLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    titleLabel.numberOfLines = 0;
+    [titleLabel setFont:[UIFont boldSystemFontOfSize:17.0f]];
+    [titleLabel setTextColor:[UIColor sidraFlatDarkGrayColor]];
+    [titleLabel setText:maximumTitle];
+    [titleLabel setBackgroundColor:[UIColor clearColor]];
+    [topTitleView addSubview:titleLabel];
+    
+//    UIView *bottomHeadLineView = [[UIView alloc] initWithFrame:CGRectMake(titleLabel.frame.origin.x, titleLabel.frame.origin.y + titleLabel.frame.size.height + 5, 290, 1.50f)];
+//    [bottomHeadLineView setBackgroundColor:LINE_COLOR];
+//    [bottomHeadLineView setAlpha:ALPHA_VALUE];
+//    [topTitleView addSubview:bottomHeadLineView];
+    
+    [wrapperHeading addSubview:topTitleView];
+    [mainScrollview addSubview:wrapperHeading];
+
+    return wrapperHeading.frame;
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end
